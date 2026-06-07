@@ -54,6 +54,7 @@ button {
   cursor: pointer;
 }
 button:hover { background: #a93226; }
+button:disabled { background: #ccc; cursor: not-allowed; }
 #map {
   height: 420px;
   border-radius: 6px;

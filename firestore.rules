@@ -1,0 +1,16 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 災害報告コレクション。
+    // 本番運用前には Firebase Authentication 等で書き込み元を制限してください。
+    match /reports/{reportId} {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasAll([
+        'latitude', 'longitude', 'imageUrl', 'reportedAt', 'damageInfo', 'status', 'createdAt'
+      ]);
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+      allow delete: if true;
+    }
+  }
+}

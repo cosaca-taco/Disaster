@@ -1,6 +1,5 @@
-__pycache__/
-*.pyc
-.venv/
-app/reports.db
-app/uploads/*
-!app/uploads/.gitkeep
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+node_modules/

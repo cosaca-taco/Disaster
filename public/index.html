@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>災害位置情報報告システム</title>
-<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header>
@@ -33,19 +33,19 @@
 
       <label>
         被害情報
-        <textarea name="damage_info" rows="3" required placeholder="例：建物倒壊、道路冠水など"></textarea>
+        <textarea name="damage_info" id="damage-info-input" rows="3" required placeholder="例：建物倒壊、道路冠水など"></textarea>
       </label>
 
       <label>
         対応状況
-        <select name="status">
+        <select name="status" id="status-input">
           <option value="未対応">未対応</option>
           <option value="対応中">対応中</option>
           <option value="対応済み">対応済み</option>
         </select>
       </label>
 
-      <button type="submit">報告を登録</button>
+      <button type="submit" id="submit-button">報告を登録</button>
       <p id="form-message" class="hint"></p>
     </form>
   </section>
@@ -60,7 +60,6 @@
     <table id="report-table">
       <thead>
         <tr>
-          <th>ID</th>
           <th>画像</th>
           <th>位置</th>
           <th>報告時刻</th>
@@ -74,6 +73,7 @@
   </section>
 </main>
 
-<script src="/static/app.js"></script>
+<script type="module" src="config.js"></script>
+<script type="module" src="app.js"></script>
 </body>
 </html>

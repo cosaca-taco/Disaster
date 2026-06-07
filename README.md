@@ -1,31 +1,72 @@
-# 災害位置情報報告システム
+# 災害位置情報報告システム（Firebase版）
 
-画像をアップロードすると EXIF から GPS 位置情報を抽出し、Google マップ上に表示します。
-あわせて、報告時刻・被害情報・対応状況をデータベース（SQLite）に保存し、一覧で管理できます。
+画像をアップロードすると、ブラウザ側でEXIFからGPS位置情報を抽出し、Google マップ上に表示します。
+あわせて、報告時刻・被害情報・対応状況を Firestore（データベース）と Firebase Storage（画像保存）に記録・更新できます。
+
+サーバーは不要で、Firebase Hosting にデプロイするだけで動作する静的サイト構成です。
+
+## 構成
+
+- **Firestore**: 報告データ（位置情報・報告時刻・被害情報・対応状況など）の保存
+- **Firebase Storage**: アップロードされた画像の保存
+- **Firebase Hosting**: 静的サイト（HTML/CSS/JS）の公開
+- **Google Maps JavaScript API**: 地図表示
+- **exifr**（CDN経由）: ブラウザ上で画像のEXIFからGPS座標を抽出
 
 ## セットアップ
 
+### 1. Firebase プロジェクトを準備
+
 ```bash
-pip install -r requirements.txt
-export GOOGLE_MAPS_API_KEY="あなたのGoogle Maps APIキー"
-uvicorn app.main:app --reload
+npm install -g firebase-tools
+firebase login
+firebase init
 ```
 
-ブラウザで http://localhost:8000 を開きます。
+Firestore, Storage, Hosting を有効にし、`.firebaserc` の `your-firebase-project-id` を実際のプロジェクトIDに置き換えてください。
+
+### 2. 設定値を入力
+
+`public/config.js` を編集し、Firebase コンソールで取得した設定値と Google Maps APIキーを設定します。
+
+```js
+export const firebaseConfig = {
+  apiKey: "...",
+  authDomain: "...",
+  projectId: "...",
+  storageBucket: "...",
+  messagingSenderId: "...",
+  appId: "...",
+};
+
+export const googleMapsApiKey = "あなたのGoogle Maps APIキー";
+```
+
+### 3. ローカルで動作確認
+
+```bash
+firebase emulators:start
+```
+
+または
+
+```bash
+firebase serve
+```
+
+### 4. デプロイ
+
+```bash
+firebase deploy
+```
 
 ## 機能
 
-- 画像アップロード時に EXIF の GPS 情報を自動抽出（取得できない場合は緯度・経度を手入力可能）
+- 画像選択時にブラウザ上でEXIFのGPS情報を自動抽出（取得できない場合は緯度・経度を手入力可能）
 - Google マップ上に被害箇所をマーカー表示（クリックで詳細を表示）
-- 報告時刻・被害情報・対応状況（未対応／対応中／対応済み）をデータベースに登録
-- 一覧画面から対応状況の更新・報告の削除が可能
+- 報告時刻・被害情報・対応状況（未対応／対応中／対応済み）を Firestore に登録
+- 一覧画面から対応状況の更新・報告の削除が可能（Firestore はリアルタイム同期）
 
-## API
+## セキュリティに関する注意
 
-| メソッド | パス | 内容 |
-| --- | --- | --- |
-| GET | `/api/reports` | 報告一覧取得 |
-| POST | `/api/reports` | 報告登録（multipart/form-data: image, reported_at, damage_info, status, [latitude, longitude]） |
-| PATCH | `/api/reports/{id}` | 対応状況の更新 |
-| DELETE | `/api/reports/{id}` | 報告削除 |
-| GET | `/api/config` | フロントエンド設定（Google Maps APIキー）取得 |
+`firestore.rules` / `storage.rules` は動作確認用の簡易設定です。本番運用する場合は Firebase Authentication 等を導入し、書き込み・削除を許可されたユーザーのみに制限することを推奨します。
