@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>災害位置情報報告システム</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header>
+  <h1>災害位置情報報告システム</h1>
+</header>
+
+<main>
+  <section class="panel">
+    <h2>新規報告</h2>
+    <form id="report-form">
+      <label>
+        画像（位置情報付き写真）
+        <input type="file" name="image" id="image-input" accept="image/*" required>
+      </label>
+      <p id="gps-status" class="hint"></p>
+
+      <div id="manual-coords" class="manual-coords hidden">
+        <label>緯度<input type="number" step="any" name="latitude" id="latitude-input"></label>
+        <label>経度<input type="number" step="any" name="longitude" id="longitude-input"></label>
+      </div>
+
+      <label>
+        報告時刻
+        <input type="datetime-local" name="reported_at" id="reported-at-input" required>
+      </label>
+
+      <label>
+        被害情報
+        <textarea name="damage_info" rows="3" required placeholder="例：建物倒壊、道路冠水など"></textarea>
+      </label>
+
+      <label>
+        対応状況
+        <select name="status">
+          <option value="未対応">未対応</option>
+          <option value="対応中">対応中</option>
+          <option value="対応済み">対応済み</option>
+        </select>
+      </label>
+
+      <button type="submit">報告を登録</button>
+      <p id="form-message" class="hint"></p>
+    </form>
+  </section>
+
+  <section class="panel map-panel">
+    <h2>地図</h2>
+    <div id="map"></div>
+  </section>
+
+  <section class="panel">
+    <h2>報告一覧</h2>
+    <table id="report-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>画像</th>
+          <th>位置</th>
+          <th>報告時刻</th>
+          <th>被害情報</th>
+          <th>対応状況</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+</main>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
