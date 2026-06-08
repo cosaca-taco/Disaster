@@ -20,7 +20,7 @@ main {
   transition: grid-template-columns 0.2s ease;
 }
 main.list-collapsed {
-  grid-template-columns: minmax(180px, 260px) 1fr;
+  grid-template-columns: auto 1fr;
 }
 .panel {
   background: white;
@@ -87,7 +87,7 @@ button:disabled { background: #ccc; cursor: not-allowed; }
   justify-content: space-between;
   margin-bottom: 12px;
 }
-.list-header h2 { margin: 0; }
+.list-header h2 { margin: 0; white-space: nowrap; }
 .toggle-btn {
   background: #888;
   font-size: 0.8rem;
@@ -96,6 +96,23 @@ button:disabled { background: #ccc; cursor: not-allowed; }
 }
 .toggle-btn:hover { background: #6f6f6f; }
 #list-body.collapsed { display: none; }
+
+.list-panel.collapsed {
+  padding: 12px 6px;
+  align-items: center;
+}
+.list-panel.collapsed .list-header {
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 0;
+}
+.list-panel.collapsed .list-header h2 {
+  display: none;
+}
+.list-panel.collapsed .toggle-btn {
+  writing-mode: vertical-rl;
+  padding: 12px 6px;
+}
 .filter-bar {
   display: flex;
   flex-wrap: wrap;
