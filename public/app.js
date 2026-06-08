@@ -156,9 +156,14 @@ function closeModal(id) {
 
 function formatHistoryTime(value) {
   if (!value) return "";
-  if (typeof value === "string") return value;
-  if (value.toDate) return value.toDate().toLocaleString("ja-JP");
-  return "";
+  let date = null;
+  if (typeof value === "string") {
+    date = new Date(value);
+  } else if (value.toDate) {
+    date = value.toDate();
+  }
+  if (!date || Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" });
 }
 
 function renderDetail(report) {
