@@ -14,7 +14,7 @@ header h1 { margin: 0; font-size: 1.4rem; }
 body.modal-open { overflow: hidden; }
 main {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(280px, 380px) 1fr;
   gap: 16px;
   padding: 16px;
   align-items: start;
@@ -141,6 +141,14 @@ th, td {
   vertical-align: middle;
 }
 td img { max-width: 80px; max-height: 80px; border-radius: 4px; display: block; }
+.report-no-btn {
+  background: #eef3f8;
+  color: #2c7fb8;
+  font-weight: bold;
+  min-width: 36px;
+  padding: 6px 10px;
+}
+.report-no-btn:hover { background: #d8e6f3; }
 .detail-btn { background: #2c7fb8; }
 .detail-btn:hover { background: #25638f; }
 .danger-btn { background: #962d22; margin-top: 16px; }

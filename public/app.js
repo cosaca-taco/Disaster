@@ -33,6 +33,7 @@ const reportsCollection = collection(db, "reports");
 
 let map;
 let markers = [];
+let markersById = new Map();
 let allReports = [];
 let activeReportId = null;
 
@@ -47,6 +48,7 @@ function initMap() {
 function clearMarkers() {
   markers.forEach((m) => map.removeLayer(m));
   markers = [];
+  markersById = new Map();
 }
 
 function escapeHtml(value) {
@@ -72,7 +74,15 @@ function renderMarkers(reports) {
     popupContent.querySelector(".popup-detail-btn").addEventListener("click", () => openDetail(report.id));
     marker.bindPopup(popupContent);
     markers.push(marker);
+    markersById.set(report.id, marker);
   });
+}
+
+function focusOnReport(id) {
+  const marker = markersById.get(id);
+  if (!map || !marker) return;
+  map.setView(marker.getLatLng(), Math.max(map.getZoom(), 14), { animate: true });
+  marker.openPopup();
 }
 
 function getActiveFilters() {
@@ -94,11 +104,12 @@ function renderTable(reports) {
   reports.forEach((report, index) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>${index + 1}</td>
+      <td><button type="button" class="report-no-btn" title="地図上の位置を表示">${index + 1}</button></td>
       <td>${escapeHtml(report.reportedAt)}</td>
       <td><img src="${report.imageUrl}" alt="報告画像"></td>
       <td><button type="button" class="detail-btn">詳細</button></td>
     `;
+    tr.querySelector(".report-no-btn").addEventListener("click", () => focusOnReport(report.id));
     tr.querySelector(".detail-btn").addEventListener("click", () => openDetail(report.id));
     tbody.appendChild(tr);
   });
