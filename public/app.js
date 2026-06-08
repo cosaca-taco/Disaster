@@ -222,6 +222,36 @@ async function handleStatusUpdateSubmit(event) {
   document.getElementById("status-update-note").value = "";
 }
 
+const COMPRESS_MAX_DIMENSION = 1600;
+const COMPRESS_QUALITY = 0.8;
+
+async function compressImage(file, maxDimension = COMPRESS_MAX_DIMENSION, quality = COMPRESS_QUALITY) {
+  try {
+    const bitmap = await createImageBitmap(file);
+    let { width, height } = bitmap;
+    if (width > maxDimension || height > maxDimension) {
+      const scale = maxDimension / Math.max(width, height);
+      width = Math.round(width * scale);
+      height = Math.round(height * scale);
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(bitmap, 0, 0, width, height);
+
+    const blob = await new Promise((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", quality)
+    );
+    if (!blob || blob.size >= file.size) return file;
+    return new File([blob], file.name.replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" });
+  } catch (err) {
+    console.error("画像の圧縮に失敗したため、元の画像を使用します", err);
+    return file;
+  }
+}
+
 async function detectGps(file) {
   try {
     const gps = await exifr.gps(file);
@@ -319,13 +349,16 @@ async function handleSubmit(event) {
   }
 
   submitButton.disabled = true;
-  message.textContent = "アップロード中...";
+  message.textContent = "画像を圧縮しています...";
 
   try {
-    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+    const uploadFile = await compressImage(file);
+    const ext = (uploadFile.name.split(".").pop() || "jpg").toLowerCase();
     const imagePath = `reports/${crypto.randomUUID()}.${ext}`;
     const storageRef = ref(storage, imagePath);
-    await uploadBytes(storageRef, file, { contentType: file.type });
+
+    message.textContent = "アップロード中...";
+    await uploadBytes(storageRef, uploadFile, { contentType: uploadFile.type });
     const imageUrl = await getDownloadURL(storageRef);
 
     const initialStatus = document.getElementById("status-input").value;
