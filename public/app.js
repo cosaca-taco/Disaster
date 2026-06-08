@@ -237,17 +237,48 @@ async function handleImageChange(event) {
   }
   status.textContent = "画像のEXIF情報から位置情報を確認しています...";
   const gps = await detectGps(file);
+  const useCurrentLocationBtn = document.getElementById("use-current-location");
   if (gps) {
     status.textContent = `位置情報を検出しました（緯度: ${gps.latitude.toFixed(5)}, 経度: ${gps.longitude.toFixed(5)}）`;
     status.dataset.lat = gps.latitude;
     status.dataset.lng = gps.longitude;
     manualCoords.classList.add("hidden");
+    useCurrentLocationBtn.classList.add("hidden");
   } else {
-    status.textContent = "この画像から位置情報を取得できませんでした。緯度・経度を入力してください。";
+    status.textContent = "この画像から位置情報を取得できませんでした。緯度・経度を入力するか、現在地を取得してください。";
     delete status.dataset.lat;
     delete status.dataset.lng;
     manualCoords.classList.remove("hidden");
+    useCurrentLocationBtn.classList.remove("hidden");
   }
+}
+
+function handleUseCurrentLocation() {
+  const locationStatus = document.getElementById("location-status");
+  const button = document.getElementById("use-current-location");
+
+  if (!("geolocation" in navigator)) {
+    locationStatus.textContent = "このブラウザでは現在地の取得に対応していません。";
+    return;
+  }
+
+  button.disabled = true;
+  locationStatus.textContent = "現在地を取得しています...";
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const { latitude, longitude } = position.coords;
+      document.getElementById("latitude-input").value = latitude;
+      document.getElementById("longitude-input").value = longitude;
+      locationStatus.textContent = `現在地を入力しました（緯度: ${latitude.toFixed(5)}, 経度: ${longitude.toFixed(5)}）`;
+      button.disabled = false;
+    },
+    (error) => {
+      locationStatus.textContent = "現在地を取得できませんでした。位置情報の利用許可を確認してください。";
+      button.disabled = false;
+    },
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
 }
 
 async function handleSubmit(event) {
@@ -307,6 +338,8 @@ async function handleSubmit(event) {
     delete status.dataset.lat;
     delete status.dataset.lng;
     document.getElementById("manual-coords").classList.add("hidden");
+    document.getElementById("use-current-location").classList.add("hidden");
+    document.getElementById("location-status").textContent = "";
     closeModal("new-report-modal");
   } catch (err) {
     console.error(err);
@@ -323,6 +356,7 @@ function init() {
 
   document.getElementById("report-form").addEventListener("submit", handleSubmit);
   document.getElementById("image-input").addEventListener("change", handleImageChange);
+  document.getElementById("use-current-location").addEventListener("click", handleUseCurrentLocation);
   document.getElementById("status-update-form").addEventListener("submit", handleStatusUpdateSubmit);
   document.getElementById("delete-report-btn").addEventListener("click", handleDeleteReport);
 

@@ -67,6 +67,12 @@ button:disabled { background: #ccc; cursor: not-allowed; }
   margin-bottom: 12px;
 }
 .primary-btn:hover { background: #a93226; }
+.secondary-btn {
+  background: #2c7fb8;
+  width: 100%;
+  margin-bottom: 8px;
+}
+.secondary-btn:hover { background: #25638f; }
 
 #map {
   height: 600px;
