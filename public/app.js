@@ -124,10 +124,15 @@ function toggleListPanel() {
 
 function openModal(id) {
   document.getElementById(id).classList.remove("hidden");
+  document.body.classList.add("modal-open");
 }
 
 function closeModal(id) {
   document.getElementById(id).classList.add("hidden");
+  const anyOpen = Array.from(document.querySelectorAll(".modal-overlay")).some(
+    (overlay) => !overlay.classList.contains("hidden")
+  );
+  if (!anyOpen) document.body.classList.remove("modal-open");
 }
 
 function formatHistoryTime(value) {
