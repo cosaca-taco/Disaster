@@ -133,7 +133,8 @@ function toggleListPanel() {
   const collapsed = body.classList.toggle("collapsed");
   document.querySelector("main").classList.toggle("list-collapsed", collapsed);
   document.querySelector(".list-panel").classList.toggle("collapsed", collapsed);
-  button.textContent = collapsed ? "開く" : "折りたたむ";
+  button.textContent = collapsed ? "▶" : "◀";
+  button.title = collapsed ? "一覧を開く" : "一覧を折りたたむ";
   button.setAttribute("aria-expanded", String(!collapsed));
   if (map) {
     setTimeout(() => map.invalidateSize(), 220);

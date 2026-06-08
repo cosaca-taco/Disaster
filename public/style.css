@@ -94,9 +94,11 @@ button:disabled { background: #ccc; cursor: not-allowed; }
 .list-header h2 { margin: 0; white-space: nowrap; }
 .toggle-btn {
   background: #888;
-  font-size: 0.8rem;
-  padding: 6px 12px;
+  font-size: 0.95rem;
+  font-weight: bold;
+  padding: 6px 14px;
   white-space: nowrap;
+  line-height: 1;
 }
 .toggle-btn:hover { background: #6f6f6f; }
 #list-body.collapsed { display: none; }
@@ -114,8 +116,8 @@ button:disabled { background: #ccc; cursor: not-allowed; }
   display: none;
 }
 .list-panel.collapsed .toggle-btn {
-  writing-mode: vertical-rl;
-  padding: 12px 6px;
+  padding: 10px;
+  font-size: 1rem;
 }
 .filter-bar {
   display: flex;
