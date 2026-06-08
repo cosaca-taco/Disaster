@@ -9,7 +9,7 @@ service cloud.firestore {
       allow create: if request.resource.data.keys().hasAll([
         'latitude', 'longitude', 'imageUrl', 'reportedAt', 'damageInfo', 'status', 'createdAt'
       ]);
-      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'statusHistory']);
       allow delete: if true;
     }
   }

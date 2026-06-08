@@ -11,6 +11,7 @@ import {
   doc,
   updateDoc,
   deleteDoc,
+  arrayUnion,
   serverTimestamp,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
@@ -23,6 +24,7 @@ import {
 import exifr from "https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.esm.mjs";
 
 const STATUSES = ["未対応", "対応中", "対応済み"];
+const DEFAULT_FILTERS = ["未対応", "対応中"];
 
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp);
@@ -31,6 +33,8 @@ const reportsCollection = collection(db, "reports");
 
 let map;
 let markers = [];
+let allReports = [];
+let activeReportId = null;
 
 function initMap() {
   map = L.map("map").setView([35.681236, 139.767125], 6);
@@ -64,56 +68,133 @@ function renderMarkers(reports) {
   });
 }
 
+function getActiveFilters() {
+  return Array.from(document.querySelectorAll(".status-filter"))
+    .filter((checkbox) => checkbox.checked)
+    .map((checkbox) => checkbox.value);
+}
+
+function applyFiltersAndRender() {
+  const filters = getActiveFilters();
+  const filtered = allReports.filter((report) => filters.includes(report.status));
+  renderTable(filtered);
+  renderMarkers(filtered);
+}
+
 function renderTable(reports) {
   const tbody = document.querySelector("#report-table tbody");
   tbody.innerHTML = "";
-  reports.forEach((report) => {
+  reports.forEach((report, index) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td><a href="${report.imageUrl}" target="_blank"><img src="${report.imageUrl}" alt="報告画像"></a></td>
-      <td>${report.latitude.toFixed(5)}, ${report.longitude.toFixed(5)}</td>
+      <td>${index + 1}</td>
       <td>${escapeHtml(report.reportedAt)}</td>
-      <td>${escapeHtml(report.damageInfo)}</td>
-      <td></td>
-      <td><button class="delete-btn">削除</button></td>
+      <td><img src="${report.imageUrl}" alt="報告画像"></td>
+      <td><button type="button" class="detail-btn">詳細</button></td>
     `;
-    const statusCell = tr.children[4];
-    const select = document.createElement("select");
-    select.className = "status-select";
-    STATUSES.forEach((status) => {
-      const option = document.createElement("option");
-      option.value = status;
-      option.textContent = status;
-      if (status === report.status) option.selected = true;
-      select.appendChild(option);
-    });
-    select.addEventListener("change", () => updateStatus(report.id, select.value));
-    statusCell.appendChild(select);
-
-    tr.querySelector(".delete-btn").addEventListener("click", () => deleteReport(report));
+    tr.querySelector(".detail-btn").addEventListener("click", () => openDetail(report.id));
     tbody.appendChild(tr);
   });
 }
 
 function subscribeReports() {
-  const reportsQuery = query(reportsCollection, orderBy("createdAt", "desc"));
+  const reportsQuery = query(reportsCollection, orderBy("reportedAt", "desc"));
   onSnapshot(reportsQuery, (snapshot) => {
-    const reports = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-    renderTable(reports);
-    renderMarkers(reports);
+    allReports = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+    applyFiltersAndRender();
+    if (activeReportId) {
+      const updated = allReports.find((r) => r.id === activeReportId);
+      if (updated) renderDetail(updated);
+    }
   });
 }
 
-async function updateStatus(id, status) {
-  await updateDoc(doc(db, "reports", id), { status });
+function openModal(id) {
+  document.getElementById(id).classList.remove("hidden");
 }
 
-async function deleteReport(report) {
+function closeModal(id) {
+  document.getElementById(id).classList.add("hidden");
+}
+
+function formatHistoryTime(value) {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  if (value.toDate) return value.toDate().toLocaleString("ja-JP");
+  return "";
+}
+
+function renderDetail(report) {
+  const content = document.getElementById("detail-content");
+  content.innerHTML = `
+    <dl>
+      <dt>報告時刻</dt><dd>${escapeHtml(report.reportedAt)}</dd>
+      <dt>位置</dt><dd>${report.latitude.toFixed(5)}, ${report.longitude.toFixed(5)}</dd>
+      <dt>被害情報</dt><dd>${escapeHtml(report.damageInfo)}</dd>
+      <dt>現在の対応状況</dt><dd>${escapeHtml(report.status)}</dd>
+      <dt>画像</dt><dd><img src="${report.imageUrl}" alt="報告画像"></dd>
+    </dl>
+  `;
+
+  document.getElementById("status-update-select").value = report.status;
+
+  const historyList = document.getElementById("status-history-list");
+  historyList.innerHTML = "";
+  const history = Array.isArray(report.statusHistory) ? [...report.statusHistory].reverse() : [];
+  if (history.length === 0) {
+    historyList.innerHTML = '<li class="history-meta">対応履歴はまだありません</li>';
+  } else {
+    history.forEach((entry) => {
+      const li = document.createElement("li");
+      li.innerHTML = `
+        <div><strong>${escapeHtml(entry.status)}</strong></div>
+        ${entry.note ? `<div>${escapeHtml(entry.note)}</div>` : ""}
+        <div class="history-meta">${escapeHtml(formatHistoryTime(entry.updatedAt))}</div>
+      `;
+      historyList.appendChild(li);
+    });
+  }
+}
+
+function openDetail(id) {
+  const report = allReports.find((r) => r.id === id);
+  if (!report) return;
+  activeReportId = id;
+  renderDetail(report);
+  openModal("detail-modal");
+}
+
+async function handleDeleteReport() {
+  if (!activeReportId) return;
+  const report = allReports.find((r) => r.id === activeReportId);
+  if (!report) return;
   if (!confirm("この報告を削除しますか？")) return;
+
   await deleteDoc(doc(db, "reports", report.id));
   if (report.imagePath) {
     await deleteObject(ref(storage, report.imagePath)).catch(() => {});
   }
+  activeReportId = null;
+  closeModal("detail-modal");
+}
+
+async function handleStatusUpdateSubmit(event) {
+  event.preventDefault();
+  if (!activeReportId) return;
+
+  const newStatus = document.getElementById("status-update-select").value;
+  const note = document.getElementById("status-update-note").value.trim();
+
+  await updateDoc(doc(db, "reports", activeReportId), {
+    status: newStatus,
+    statusHistory: arrayUnion({
+      status: newStatus,
+      note,
+      updatedAt: new Date().toISOString(),
+    }),
+  });
+
+  document.getElementById("status-update-note").value = "";
 }
 
 async function detectGps(file) {
@@ -191,6 +272,8 @@ async function handleSubmit(event) {
     await uploadBytes(storageRef, file, { contentType: file.type });
     const imageUrl = await getDownloadURL(storageRef);
 
+    const initialStatus = document.getElementById("status-input").value;
+
     await addDoc(reportsCollection, {
       latitude,
       longitude,
@@ -198,7 +281,10 @@ async function handleSubmit(event) {
       imagePath,
       reportedAt: document.getElementById("reported-at-input").value,
       damageInfo: document.getElementById("damage-info-input").value,
-      status: document.getElementById("status-input").value,
+      status: initialStatus,
+      statusHistory: [
+        { status: initialStatus, note: "新規登録", updatedAt: new Date().toISOString() },
+      ],
       createdAt: serverTimestamp(),
     });
 
@@ -209,6 +295,7 @@ async function handleSubmit(event) {
     delete status.dataset.lat;
     delete status.dataset.lng;
     document.getElementById("manual-coords").classList.add("hidden");
+    closeModal("new-report-modal");
   } catch (err) {
     console.error(err);
     message.textContent = "登録に失敗しました。設定（Firebase/権限）を確認してください。";
@@ -219,10 +306,26 @@ async function handleSubmit(event) {
 
 function init() {
   setDefaultReportedAt();
-  document.getElementById("report-form").addEventListener("submit", handleSubmit);
-  document.getElementById("image-input").addEventListener("change", handleImageChange);
   initMap();
   subscribeReports();
+
+  document.getElementById("report-form").addEventListener("submit", handleSubmit);
+  document.getElementById("image-input").addEventListener("change", handleImageChange);
+  document.getElementById("status-update-form").addEventListener("submit", handleStatusUpdateSubmit);
+  document.getElementById("delete-report-btn").addEventListener("click", handleDeleteReport);
+
+  document.getElementById("open-new-report").addEventListener("click", () => openModal("new-report-modal"));
+  document.querySelectorAll(".modal-close").forEach((btn) => {
+    btn.addEventListener("click", () => closeModal(btn.dataset.close));
+  });
+  document.querySelectorAll(".modal-overlay").forEach((overlay) => {
+    overlay.addEventListener("click", (event) => {
+      if (event.target === overlay) closeModal(overlay.id);
+    });
+  });
+  document.querySelectorAll(".status-filter").forEach((checkbox) => {
+    checkbox.addEventListener("change", applyFiltersAndRender);
+  });
 }
 
 init();

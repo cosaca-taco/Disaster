@@ -16,6 +16,7 @@ main {
   grid-template-columns: 1fr 1fr;
   gap: 16px;
   padding: 16px;
+  align-items: start;
 }
 .panel {
   background: white;
@@ -23,7 +24,6 @@ main {
   padding: 16px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.15);
 }
-.panel:last-child, .map-panel { grid-column: span 2; }
 form label {
   display: block;
   margin-bottom: 12px;
@@ -45,20 +45,44 @@ form input, form select, form textarea {
 .hidden { display: none; }
 .hint { color: #666; font-size: 0.85rem; }
 button {
-  background: #c0392b;
+  background: #777;
   color: white;
   border: none;
-  padding: 10px 20px;
+  padding: 8px 16px;
   border-radius: 4px;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   cursor: pointer;
 }
-button:hover { background: #a93226; }
+button:hover { background: #5c5c5c; }
 button:disabled { background: #ccc; cursor: not-allowed; }
+.primary-btn {
+  background: #c0392b;
+  font-size: 1rem;
+  padding: 12px 20px;
+  width: 100%;
+  margin-bottom: 12px;
+}
+.primary-btn:hover { background: #a93226; }
+
 #map {
-  height: 420px;
+  height: 600px;
   border-radius: 6px;
 }
+
+/* 一覧 */
+.list-panel { display: flex; flex-direction: column; }
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  font-size: 0.85rem;
+}
+.filter-bar label { display: inline-flex; align-items: center; gap: 4px; font-weight: normal; margin: 0; }
+.filter-bar input[type="checkbox"] { width: auto; margin: 0; }
+.filter-label { font-weight: bold; }
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -68,7 +92,65 @@ th, td {
   border-bottom: 1px solid #e0e0e0;
   padding: 8px;
   text-align: left;
-  vertical-align: top;
+  vertical-align: middle;
 }
-td img { max-width: 100px; border-radius: 4px; }
-select.status-select { width: auto; display: inline-block; }
+td img { max-width: 80px; max-height: 80px; border-radius: 4px; display: block; }
+.detail-btn { background: #2c7fb8; }
+.detail-btn:hover { background: #25638f; }
+.danger-btn { background: #962d22; margin-top: 16px; }
+.danger-btn:hover { background: #7a241b; }
+
+/* モーダル */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.modal-overlay.hidden { display: none; }
+.modal {
+  background: white;
+  border-radius: 8px;
+  padding: 24px;
+  width: min(560px, 92vw);
+  max-height: 88vh;
+  overflow-y: auto;
+  position: relative;
+}
+.modal h2 { margin-top: 0; }
+.modal h3 { margin-bottom: 8px; }
+.modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: transparent;
+  color: #555;
+  font-size: 1.4rem;
+  line-height: 1;
+  padding: 4px 8px;
+}
+.modal-close:hover { background: #eee; color: #222; }
+
+/* 詳細表示 */
+#detail-content dl { margin: 0 0 16px; font-size: 0.9rem; }
+#detail-content dt { font-weight: bold; margin-top: 8px; }
+#detail-content dd { margin: 2px 0 0; }
+#detail-content img { max-width: 100%; border-radius: 6px; margin-top: 8px; }
+
+#status-history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: 0.85rem;
+}
+#status-history-list li {
+  border-left: 3px solid #c0392b;
+  padding: 6px 10px;
+  margin-bottom: 6px;
+  background: #f8f8f8;
+  border-radius: 0 4px 4px 0;
+}
+#status-history-list .history-meta { color: #666; font-size: 0.8rem; }
