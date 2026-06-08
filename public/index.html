@@ -3,20 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>災害位置情報報告システム</title>
+<title>Disaster Location Report -ENA City-</title>
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
   integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 </head>
 <body>
 <header>
-  <h1>災害位置情報報告システム</h1>
+  <h1>Disaster Location Report -ENA City-</h1>
 </header>
 
 <main>
   <section class="panel list-panel">
     <div class="list-header">
-      <h2>報告一覧</h2>
+      <h2>Disaster List</h2>
       <button type="button" id="toggle-list" class="toggle-btn" aria-expanded="true">－ 折りたたむ</button>
     </div>
 
@@ -45,7 +45,7 @@
   </section>
 
   <section class="panel map-panel">
-    <h2>地図</h2>
+    <h2>Map</h2>
     <div id="map"></div>
   </section>
 </main>
@@ -98,7 +98,7 @@
 <div id="detail-modal" class="modal-overlay hidden">
   <div class="modal">
     <button type="button" class="modal-close" data-close="detail-modal">×</button>
-    <h2>報告の詳細</h2>
+    <h2>Details</h2>
     <div id="detail-content"></div>
 
     <h3>対応状況の更新</h3>

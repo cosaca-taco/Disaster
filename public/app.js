@@ -69,7 +69,7 @@ function renderMarkers(reports) {
       報告時刻: ${escapeHtml(report.reportedAt)}<br>
       対応状況: ${escapeHtml(report.status)}<br>
       <img src="${report.imageUrl}" alt="報告画像"><br>
-      <button type="button" class="popup-detail-btn detail-btn">詳細</button>
+      <button type="button" class="popup-detail-btn detail-btn">More</button>
     `;
     popupContent.querySelector(".popup-detail-btn").addEventListener("click", () => openDetail(report.id));
     marker.bindPopup(popupContent);
@@ -107,7 +107,7 @@ function renderTable(reports) {
       <td><button type="button" class="report-no-btn" title="地図上の位置を表示">${index + 1}</button></td>
       <td>${escapeHtml(report.reportedAt)}</td>
       <td><img src="${report.imageUrl}" alt="報告画像"></td>
-      <td><button type="button" class="detail-btn">詳細</button></td>
+      <td><button type="button" class="detail-btn">More</button></td>
     `;
     tr.querySelector(".report-no-btn").addEventListener("click", () => focusOnReport(report.id));
     tr.querySelector(".detail-btn").addEventListener("click", () => openDetail(report.id));
