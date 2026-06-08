@@ -113,8 +113,12 @@ function toggleListPanel() {
   const body = document.getElementById("list-body");
   const button = document.getElementById("toggle-list");
   const collapsed = body.classList.toggle("collapsed");
+  document.querySelector("main").classList.toggle("list-collapsed", collapsed);
   button.textContent = collapsed ? "＋ 開く" : "－ 折りたたむ";
   button.setAttribute("aria-expanded", String(!collapsed));
+  if (map) {
+    setTimeout(() => map.invalidateSize(), 220);
+  }
 }
 
 function openModal(id) {
