@@ -71,6 +71,21 @@ button:disabled { background: #ccc; cursor: not-allowed; }
 
 /* 一覧 */
 .list-panel { display: flex; flex-direction: column; }
+.list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.list-header h2 { margin: 0; }
+.toggle-btn {
+  background: #888;
+  font-size: 0.8rem;
+  padding: 6px 12px;
+  white-space: nowrap;
+}
+.toggle-btn:hover { background: #6f6f6f; }
+#list-body.collapsed { display: none; }
 .filter-bar {
   display: flex;
   flex-wrap: wrap;

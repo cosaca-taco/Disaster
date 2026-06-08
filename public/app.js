@@ -109,6 +109,14 @@ function subscribeReports() {
   });
 }
 
+function toggleListPanel() {
+  const body = document.getElementById("list-body");
+  const button = document.getElementById("toggle-list");
+  const collapsed = body.classList.toggle("collapsed");
+  button.textContent = collapsed ? "＋ 開く" : "－ 折りたたむ";
+  button.setAttribute("aria-expanded", String(!collapsed));
+}
+
 function openModal(id) {
   document.getElementById(id).classList.remove("hidden");
 }
@@ -315,6 +323,7 @@ function init() {
   document.getElementById("delete-report-btn").addEventListener("click", handleDeleteReport);
 
   document.getElementById("open-new-report").addEventListener("click", () => openModal("new-report-modal"));
+  document.getElementById("toggle-list").addEventListener("click", toggleListPanel);
   document.querySelectorAll(".modal-close").forEach((btn) => {
     btn.addEventListener("click", () => closeModal(btn.dataset.close));
   });
