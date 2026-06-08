@@ -1,4 +1,4 @@
-import { firebaseConfig, googleMapsApiKey } from "./config.js";
+import { firebaseConfig } from "./config.js";
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
@@ -32,29 +32,16 @@ const reportsCollection = collection(db, "reports");
 let map;
 let markers = [];
 
-async function initMap() {
-  const { Map } = await google.maps.importLibrary("maps");
-  map = new Map(document.getElementById("map"), {
-    center: { lat: 35.681236, lng: 139.767125 },
-    zoom: 6,
-  });
-}
-window.initMap = initMap;
-
-function loadGoogleMaps(apiKey) {
-  if (!apiKey || apiKey.startsWith("YOUR_")) {
-    document.getElementById("map").textContent =
-      "Google Maps APIキーが設定されていません（public/config.js の googleMapsApiKey を設定してください）";
-    return;
-  }
-  const script = document.createElement("script");
-  script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&loading=async&callback=initMap`;
-  script.async = true;
-  document.head.appendChild(script);
+function initMap() {
+  map = L.map("map").setView([35.681236, 139.767125], 6);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    maxZoom: 19,
+  }).addTo(map);
 }
 
 function clearMarkers() {
-  markers.forEach((m) => m.setMap(null));
+  markers.forEach((m) => map.removeLayer(m));
   markers = [];
 }
 
@@ -68,18 +55,11 @@ function renderMarkers(reports) {
   if (!map) return;
   clearMarkers();
   reports.forEach((report) => {
-    const marker = new google.maps.Marker({
-      position: { lat: report.latitude, lng: report.longitude },
-      map,
-      title: report.damageInfo,
-    });
-    const info = new google.maps.InfoWindow({
-      content: `<strong>${escapeHtml(report.damageInfo)}</strong><br>
+    const marker = L.marker([report.latitude, report.longitude]).addTo(map);
+    marker.bindPopup(`<strong>${escapeHtml(report.damageInfo)}</strong><br>
                 報告時刻: ${escapeHtml(report.reportedAt)}<br>
                 対応状況: ${escapeHtml(report.status)}<br>
-                <img src="${report.imageUrl}" style="max-width:160px;">`,
-    });
-    marker.addListener("click", () => info.open(map, marker));
+                <img src="${report.imageUrl}" style="max-width:160px;">`);
     markers.push(marker);
   });
 }
@@ -241,7 +221,7 @@ function init() {
   setDefaultReportedAt();
   document.getElementById("report-form").addEventListener("submit", handleSubmit);
   document.getElementById("image-input").addEventListener("change", handleImageChange);
-  loadGoogleMaps(googleMapsApiKey);
+  initMap();
   subscribeReports();
 }
 

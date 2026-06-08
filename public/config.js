@@ -7,6 +7,3 @@ export const firebaseConfig = {
   messagingSenderId: "849447593651",
   appId: "1:849447593651:web:c6fabd729cc8b0864eb2c6",
 };
-
-// Google Cloud Console で取得した Google Maps JavaScript API のAPIキーに置き換えてください
-export const googleMapsApiKey = "YOUR_GOOGLE_MAPS_API_KEY";

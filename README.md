@@ -1,6 +1,6 @@
 # 災害位置情報報告システム（Firebase版）
 
-画像をアップロードすると、ブラウザ側でEXIFからGPS位置情報を抽出し、Google マップ上に表示します。
+画像をアップロードすると、ブラウザ側でEXIFからGPS位置情報を抽出し、地図上に表示します。
 あわせて、報告時刻・被害情報・対応状況を Firestore（データベース）と Firebase Storage（画像保存）に記録・更新できます。
 
 サーバーは不要で、Firebase Hosting にデプロイするだけで動作する静的サイト構成です。
@@ -10,7 +10,7 @@
 - **Firestore**: 報告データ（位置情報・報告時刻・被害情報・対応状況など）の保存
 - **Firebase Storage**: アップロードされた画像の保存
 - **Firebase Hosting**: 静的サイト（HTML/CSS/JS）の公開
-- **Google Maps JavaScript API**: 地図表示
+- **Leaflet + OpenStreetMap**: 地図表示（APIキー不要・無料）
 - **exifr**（CDN経由）: ブラウザ上で画像のEXIFからGPS座標を抽出
 
 ## セットアップ
@@ -27,7 +27,7 @@ Firestore, Storage, Hosting を有効にし、`.firebaserc` の `your-firebase-p
 
 ### 2. 設定値を入力
 
-`public/config.js` を編集し、Firebase コンソールで取得した設定値と Google Maps APIキーを設定します。
+`public/config.js` を編集し、Firebase コンソールで取得した設定値を設定します。
 
 ```js
 export const firebaseConfig = {
@@ -38,9 +38,9 @@ export const firebaseConfig = {
   messagingSenderId: "...",
   appId: "...",
 };
-
-export const googleMapsApiKey = "あなたのGoogle Maps APIキー";
 ```
+
+地図表示には Leaflet + OpenStreetMap を使用しているため、APIキーや課金設定は不要です。
 
 ### 3. ローカルで動作確認
 
@@ -63,7 +63,7 @@ firebase deploy
 ## 機能
 
 - 画像選択時にブラウザ上でEXIFのGPS情報を自動抽出（取得できない場合は緯度・経度を手入力可能）
-- Google マップ上に被害箇所をマーカー表示（クリックで詳細を表示）
+- 地図（OpenStreetMap）上に被害箇所をマーカー表示（クリックで詳細を表示）
 - 報告時刻・被害情報・対応状況（未対応／対応中／対応済み）を Firestore に登録
 - 一覧画面から対応状況の更新・報告の削除が可能（Firestore はリアルタイム同期）
 
