@@ -79,6 +79,9 @@ button:disabled { background: #ccc; cursor: not-allowed; }
   height: 600px;
   border-radius: 6px;
 }
+.marker-popup { font-size: 0.85rem; line-height: 1.5; }
+.marker-popup img { max-width: 160px; border-radius: 4px; margin-top: 6px; display: block; }
+.marker-popup .popup-detail-btn { margin-top: 8px; }
 
 /* 一覧 */
 .list-panel { display: flex; flex-direction: column; }

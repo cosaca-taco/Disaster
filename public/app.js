@@ -60,10 +60,17 @@ function renderMarkers(reports) {
   clearMarkers();
   reports.forEach((report) => {
     const marker = L.marker([report.latitude, report.longitude]).addTo(map);
-    marker.bindPopup(`<strong>${escapeHtml(report.damageInfo)}</strong><br>
-                報告時刻: ${escapeHtml(report.reportedAt)}<br>
-                対応状況: ${escapeHtml(report.status)}<br>
-                <img src="${report.imageUrl}" style="max-width:160px;">`);
+    const popupContent = document.createElement("div");
+    popupContent.className = "marker-popup";
+    popupContent.innerHTML = `
+      <strong>${escapeHtml(report.damageInfo)}</strong><br>
+      報告時刻: ${escapeHtml(report.reportedAt)}<br>
+      対応状況: ${escapeHtml(report.status)}<br>
+      <img src="${report.imageUrl}" alt="報告画像"><br>
+      <button type="button" class="popup-detail-btn detail-btn">詳細</button>
+    `;
+    popupContent.querySelector(".popup-detail-btn").addEventListener("click", () => openDetail(report.id));
+    marker.bindPopup(popupContent);
     markers.push(marker);
   });
 }
