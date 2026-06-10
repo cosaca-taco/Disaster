@@ -21,15 +21,25 @@ import {
   getDownloadURL,
   deleteObject,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+import {
+  getAuth,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
+  signOut,
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import exifr from "https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.esm.mjs";
 
 const STATUSES = ["未対応", "対応中", "対応済み"];
-const DEFAULT_FILTERS = ["未対応", "対応中"];
 
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp);
 const storage = getStorage(firebaseApp);
+const auth = getAuth(firebaseApp);
 const reportsCollection = collection(db, "reports");
+
+let currentUser = null;
 
 let map;
 let markers = [];
@@ -171,6 +181,7 @@ function renderDetail(report) {
   content.innerHTML = `
     <dl>
       <dt>報告時刻</dt><dd>${escapeHtml(report.reportedAt)}</dd>
+      <dt>報告者</dt><dd>${escapeHtml(report.reporterEmail || "不明")}</dd>
       <dt>位置</dt><dd>${report.latitude.toFixed(5)}, ${report.longitude.toFixed(5)}</dd>
       <dt>被害情報</dt><dd>${escapeHtml(report.damageInfo)}</dd>
       <dt>現在の対応状況</dt><dd>${escapeHtml(report.status)}</dd>
@@ -388,6 +399,7 @@ async function handleSubmit(event) {
       reportedAt: document.getElementById("reported-at-input").value,
       damageInfo: document.getElementById("damage-info-input").value,
       status: initialStatus,
+      reporterEmail: currentUser ? currentUser.email : "",
       statusHistory: [
         { status: initialStatus, note: "新規登録", updatedAt: new Date().toISOString() },
       ],
@@ -412,10 +424,12 @@ async function handleSubmit(event) {
   }
 }
 
-function init() {
+let reportsUnsubscribe = null;
+
+function initApp() {
   setDefaultReportedAt();
   initMap();
-  subscribeReports();
+  if (!reportsUnsubscribe) reportsUnsubscribe = subscribeReports();
 
   document.getElementById("report-form").addEventListener("submit", handleSubmit);
   document.getElementById("image-input").addEventListener("change", handleImageChange);
@@ -436,6 +450,113 @@ function init() {
   document.querySelectorAll(".status-filter").forEach((checkbox) => {
     checkbox.addEventListener("change", applyFiltersAndRender);
   });
+  document.getElementById("signout-btn").addEventListener("click", handleSignOut);
 }
+
+// ── 認証 ──────────────────────────────────────────
+
+function showAuthScreen() {
+  document.getElementById("auth-screen").classList.remove("hidden");
+  document.getElementById("user-info").classList.add("hidden");
+}
+
+function hideAuthScreen(user) {
+  document.getElementById("auth-screen").classList.add("hidden");
+  document.getElementById("user-info").classList.remove("hidden");
+  document.getElementById("user-email").textContent = user.email;
+}
+
+function setAuthMessage(id, text, isError = false) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.style.color = isError ? "#c0392b" : "#2c7fb8";
+}
+
+async function handleLogin(event) {
+  event.preventDefault();
+  const email = document.getElementById("login-email").value.trim();
+  const password = document.getElementById("login-password").value;
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+  } catch (err) {
+    setAuthMessage("login-message", authErrorMessage(err.code), true);
+  }
+}
+
+async function handleRegister(event) {
+  event.preventDefault();
+  const email = document.getElementById("register-email").value.trim();
+  const password = document.getElementById("register-password").value;
+  const confirm = document.getElementById("register-password-confirm").value;
+  if (password !== confirm) {
+    setAuthMessage("register-message", "パスワードが一致しません", true);
+    return;
+  }
+  try {
+    await createUserWithEmailAndPassword(auth, email, password);
+  } catch (err) {
+    setAuthMessage("register-message", authErrorMessage(err.code), true);
+  }
+}
+
+async function handleForgotPassword() {
+  const email = document.getElementById("login-email").value.trim();
+  if (!email) {
+    setAuthMessage("login-message", "メールアドレスを入力してからボタンを押してください", true);
+    return;
+  }
+  try {
+    await sendPasswordResetEmail(auth, email);
+    setAuthMessage("login-message", "パスワードリセットメールを送信しました");
+  } catch (err) {
+    setAuthMessage("login-message", authErrorMessage(err.code), true);
+  }
+}
+
+async function handleSignOut() {
+  await signOut(auth);
+}
+
+function authErrorMessage(code) {
+  const messages = {
+    "auth/invalid-email": "メールアドレスの形式が正しくありません",
+    "auth/user-not-found": "このメールアドレスは登録されていません",
+    "auth/wrong-password": "パスワードが間違っています",
+    "auth/invalid-credential": "メールアドレスまたはパスワードが正しくありません",
+    "auth/email-already-in-use": "このメールアドレスはすでに登録されています",
+    "auth/weak-password": "パスワードは6文字以上で入力してください",
+    "auth/too-many-requests": "ログイン試行が多すぎます。しばらく待ってから再試行してください",
+  };
+  return messages[code] || "エラーが発生しました。再度お試しください";
+}
+
+function initAuth() {
+  document.getElementById("login-form").addEventListener("submit", handleLogin);
+  document.getElementById("register-form").addEventListener("submit", handleRegister);
+  document.getElementById("forgot-password-btn").addEventListener("click", handleForgotPassword);
+
+  document.querySelectorAll(".auth-tab").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".auth-tab").forEach((t) => t.classList.remove("active"));
+      tab.classList.add("active");
+      const target = tab.dataset.tab;
+      document.getElementById("login-form").classList.toggle("hidden", target !== "login");
+      document.getElementById("register-form").classList.toggle("hidden", target !== "register");
+    });
+  });
+
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      currentUser = user;
+      hideAuthScreen(user);
+      initApp();
+    } else {
+      currentUser = null;
+      showAuthScreen();
+    }
+  });
+}
+
+initAuth();
 
 init();

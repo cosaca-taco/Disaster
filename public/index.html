@@ -11,7 +11,52 @@
 <body>
 <header>
   <h1>Disaster Location Report -ENA City-</h1>
+  <div id="user-info" class="user-info hidden">
+    <span id="user-email"></span>
+    <button type="button" id="signout-btn" class="signout-btn">サインアウト</button>
+  </div>
 </header>
+
+<!-- ログイン画面 -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <h2>Disaster Location Report</h2>
+    <p class="auth-subtitle">-ENA City-</p>
+
+    <div class="auth-tabs">
+      <button type="button" class="auth-tab active" data-tab="login">ログイン</button>
+      <button type="button" class="auth-tab" data-tab="register">新規登録</button>
+    </div>
+
+    <!-- ログインフォーム -->
+    <form id="login-form" class="auth-form">
+      <label>メールアドレス
+        <input type="email" id="login-email" required autocomplete="email">
+      </label>
+      <label>パスワード
+        <input type="password" id="login-password" required autocomplete="current-password">
+      </label>
+      <button type="submit" class="primary-btn">ログイン</button>
+      <button type="button" id="forgot-password-btn" class="link-btn">パスワードを忘れた場合</button>
+      <p id="login-message" class="hint"></p>
+    </form>
+
+    <!-- 新規登録フォーム -->
+    <form id="register-form" class="auth-form hidden">
+      <label>メールアドレス
+        <input type="email" id="register-email" required autocomplete="email">
+      </label>
+      <label>パスワード（6文字以上）
+        <input type="password" id="register-password" required autocomplete="new-password" minlength="6">
+      </label>
+      <label>パスワード（確認）
+        <input type="password" id="register-password-confirm" required autocomplete="new-password">
+      </label>
+      <button type="submit" class="primary-btn">登録する</button>
+      <p id="register-message" class="hint"></p>
+    </form>
+  </div>
+</div>
 
 <main>
   <section class="panel list-panel">

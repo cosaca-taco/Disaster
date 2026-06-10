@@ -8,9 +8,116 @@ body {
 header {
   background: #c0392b;
   color: white;
-  padding: 16px 24px;
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
-header h1 { margin: 0; font-size: 1.4rem; }
+header h1 { margin: 0; font-size: 1.4rem; white-space: nowrap; }
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+  font-size: 0.82rem;
+  flex-shrink: 0;
+}
+.user-info.hidden { display: none; }
+#user-email {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+.signout-btn {
+  background: rgba(255,255,255,0.2);
+  color: white;
+  border: 1px solid rgba(255,255,255,0.5);
+  font-size: 0.8rem;
+  padding: 5px 12px;
+  border-radius: 4px;
+}
+.signout-btn:hover { background: rgba(255,255,255,0.35); }
+
+/* ログイン画面 */
+#auth-screen {
+  position: fixed;
+  inset: 0;
+  background: #f4f5f7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+  padding: 16px;
+}
+#auth-screen.hidden { display: none; }
+.auth-card {
+  background: white;
+  border-radius: 10px;
+  padding: 32px;
+  width: min(420px, 100%);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+}
+.auth-card h2 {
+  margin: 0 0 4px;
+  font-size: 1.3rem;
+  color: #c0392b;
+  text-align: center;
+}
+.auth-subtitle {
+  text-align: center;
+  color: #888;
+  font-size: 0.9rem;
+  margin: 0 0 24px;
+}
+.auth-tabs {
+  display: flex;
+  border-bottom: 2px solid #eee;
+  margin-bottom: 20px;
+}
+.auth-tab {
+  flex: 1;
+  background: none;
+  color: #888;
+  border: none;
+  padding: 10px;
+  font-size: 0.95rem;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  border-radius: 0;
+}
+.auth-tab:hover { color: #c0392b; background: none; }
+.auth-tab.active {
+  color: #c0392b;
+  font-weight: bold;
+  border-bottom-color: #c0392b;
+}
+.auth-form label {
+  display: block;
+  margin-bottom: 14px;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+.auth-form input {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  font-weight: normal;
+}
+.link-btn {
+  background: none;
+  color: #2c7fb8;
+  font-size: 0.85rem;
+  padding: 4px 0;
+  text-decoration: underline;
+  display: block;
+  margin-top: 8px;
+}
+.link-btn:hover { background: none; color: #1a5a87; }
 body.modal-open { overflow: hidden; }
 main {
   display: grid;

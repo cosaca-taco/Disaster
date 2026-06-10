@@ -2,13 +2,12 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // 報告画像の保存先。
-    // 本番運用前には Firebase Authentication 等でアップロード元を制限してください。
     match /reports/{fileName} {
-      allow read: if true;
-      allow write: if request.resource.size < 15 * 1024 * 1024
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && request.resource.size < 15 * 1024 * 1024
                    && request.resource.contentType.matches('image/.*');
-      allow delete: if true;
+      allow delete: if request.auth != null;
     }
   }
 }
