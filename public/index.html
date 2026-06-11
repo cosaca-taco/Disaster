@@ -107,12 +107,17 @@
       </label>
       <p id="gps-status" class="hint"></p>
 
-      <div id="manual-coords" class="manual-coords hidden">
-        <label>緯度<input type="number" step="any" name="latitude" id="latitude-input"></label>
-        <label>経度<input type="number" step="any" name="longitude" id="longitude-input"></label>
+      <div class="location-actions">
+        <button type="button" id="use-current-location" class="secondary-btn">📍 現在地を取得</button>
+        <button type="button" id="toggle-manual-coords" class="link-btn">✏️ 座標を修正する</button>
       </div>
-      <button type="button" id="use-current-location" class="secondary-btn hidden">📍 現在地を取得して入力</button>
       <p id="location-status" class="hint"></p>
+
+      <div id="manual-coords" class="manual-coords hidden">
+        <label>緯度<input type="number" step="any" id="latitude-input"></label>
+        <label>経度<input type="number" step="any" id="longitude-input"></label>
+        <button type="button" id="apply-manual-coords" class="secondary-btn">この座標を使用</button>
+      </div>
 
       <label>
         報告時刻

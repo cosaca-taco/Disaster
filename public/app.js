@@ -298,29 +298,35 @@ function setDefaultReportedAt() {
   input.value = now.toISOString().slice(0, 16);
 }
 
+function setCoords(latitude, longitude) {
+  const status = document.getElementById("gps-status");
+  status.dataset.lat = latitude;
+  status.dataset.lng = longitude;
+  document.getElementById("latitude-input").value = latitude;
+  document.getElementById("longitude-input").value = longitude;
+}
+
+function clearCoords() {
+  const status = document.getElementById("gps-status");
+  delete status.dataset.lat;
+  delete status.dataset.lng;
+}
+
 async function handleImageChange(event) {
   const file = event.target.files[0];
-  const status = document.getElementById("gps-status");
-  const manualCoords = document.getElementById("manual-coords");
+  const gpsStatus = document.getElementById("gps-status");
   if (!file) {
-    status.textContent = "";
+    gpsStatus.textContent = "";
     return;
   }
-  status.textContent = "画像のEXIF情報から位置情報を確認しています...";
+  gpsStatus.textContent = "画像のEXIF情報から位置情報を確認しています...";
   const gps = await detectGps(file);
-  const useCurrentLocationBtn = document.getElementById("use-current-location");
   if (gps) {
-    status.textContent = `位置情報を検出しました（緯度: ${gps.latitude.toFixed(5)}, 経度: ${gps.longitude.toFixed(5)}）`;
-    status.dataset.lat = gps.latitude;
-    status.dataset.lng = gps.longitude;
-    manualCoords.classList.add("hidden");
-    useCurrentLocationBtn.classList.add("hidden");
+    setCoords(gps.latitude, gps.longitude);
+    gpsStatus.textContent = `📷 画像から位置情報を取得しました（緯度: ${gps.latitude.toFixed(5)}, 経度: ${gps.longitude.toFixed(5)}）`;
   } else {
-    status.textContent = "この画像から位置情報を取得できませんでした。緯度・経度を入力するか、現在地を取得してください。";
-    delete status.dataset.lat;
-    delete status.dataset.lng;
-    manualCoords.classList.remove("hidden");
-    useCurrentLocationBtn.classList.remove("hidden");
+    clearCoords();
+    gpsStatus.textContent = "⚠️ 画像から位置情報を取得できませんでした。「現在地を取得」ボタンを押してください。";
   }
 }
 
@@ -336,20 +342,54 @@ function handleUseCurrentLocation() {
   button.disabled = true;
   locationStatus.textContent = "現在地を取得しています...";
 
+  const onSuccess = (position) => {
+    const { latitude, longitude } = position.coords;
+    setCoords(latitude, longitude);
+    document.getElementById("gps-status").textContent =
+      `📍 現在地を取得しました（緯度: ${latitude.toFixed(5)}, 経度: ${longitude.toFixed(5)}）`;
+    locationStatus.textContent = "必要に応じて「座標を修正する」から調整できます";
+    button.disabled = false;
+  };
+
+  const onError = (error, highAccuracy) => {
+    if (highAccuracy) {
+      // 高精度で失敗した場合、低精度でリトライ
+      locationStatus.textContent = "GPS取得中（低精度モードで再試行中）...";
+      navigator.geolocation.getCurrentPosition(onSuccess,
+        (err) => {
+          locationStatus.textContent = "現在地を取得できませんでした。設定で位置情報の許可を確認してください。";
+          button.disabled = false;
+        },
+        { enableHighAccuracy: false, timeout: 15000 }
+      );
+    }
+  };
+
   navigator.geolocation.getCurrentPosition(
-    (position) => {
-      const { latitude, longitude } = position.coords;
-      document.getElementById("latitude-input").value = latitude;
-      document.getElementById("longitude-input").value = longitude;
-      locationStatus.textContent = `現在地を入力しました（緯度: ${latitude.toFixed(5)}, 経度: ${longitude.toFixed(5)}）`;
-      button.disabled = false;
-    },
-    (error) => {
-      locationStatus.textContent = "現在地を取得できませんでした。位置情報の利用許可を確認してください。";
-      button.disabled = false;
-    },
+    onSuccess,
+    (err) => onError(err, true),
     { enableHighAccuracy: true, timeout: 10000 }
   );
+}
+
+function handleToggleManualCoords() {
+  const manualCoords = document.getElementById("manual-coords");
+  const isHidden = manualCoords.classList.toggle("hidden");
+  document.getElementById("toggle-manual-coords").textContent =
+    isHidden ? "✏️ 座標を修正する" : "✏️ 座標を閉じる";
+}
+
+function handleApplyManualCoords() {
+  const lat = parseFloat(document.getElementById("latitude-input").value);
+  const lng = parseFloat(document.getElementById("longitude-input").value);
+  if (isNaN(lat) || isNaN(lng)) {
+    document.getElementById("location-status").textContent = "緯度・経度を正しく入力してください";
+    return;
+  }
+  setCoords(lat, lng);
+  document.getElementById("gps-status").textContent =
+    `✏️ 座標を手入力しました（緯度: ${lat.toFixed(5)}, 経度: ${lng.toFixed(5)}）`;
+  document.getElementById("location-status").textContent = "";
 }
 
 async function handleSubmit(event) {
@@ -366,14 +406,8 @@ async function handleSubmit(event) {
   let longitude = status.dataset.lng ? Number(status.dataset.lng) : null;
 
   if (latitude === null || longitude === null) {
-    const manualLat = document.getElementById("latitude-input").value;
-    const manualLng = document.getElementById("longitude-input").value;
-    if (manualLat === "" || manualLng === "") {
-      message.textContent = "位置情報を取得できないため、緯度・経度を入力してください。";
-      return;
-    }
-    latitude = Number(manualLat);
-    longitude = Number(manualLng);
+    message.textContent = "⚠️ 位置情報が設定されていません。「現在地を取得」または「座標を修正する」から設定してください。";
+    return;
   }
 
   submitButton.disabled = true;
@@ -410,10 +444,9 @@ async function handleSubmit(event) {
     form.reset();
     setDefaultReportedAt();
     status.textContent = "";
-    delete status.dataset.lat;
-    delete status.dataset.lng;
+    clearCoords();
     document.getElementById("manual-coords").classList.add("hidden");
-    document.getElementById("use-current-location").classList.add("hidden");
+    document.getElementById("toggle-manual-coords").textContent = "✏️ 座標を修正する";
     document.getElementById("location-status").textContent = "";
     closeModal("new-report-modal");
   } catch (err) {
@@ -434,6 +467,8 @@ function initApp() {
   document.getElementById("report-form").addEventListener("submit", handleSubmit);
   document.getElementById("image-input").addEventListener("change", handleImageChange);
   document.getElementById("use-current-location").addEventListener("click", handleUseCurrentLocation);
+  document.getElementById("toggle-manual-coords").addEventListener("click", handleToggleManualCoords);
+  document.getElementById("apply-manual-coords").addEventListener("click", handleApplyManualCoords);
   document.getElementById("status-update-form").addEventListener("submit", handleStatusUpdateSubmit);
   document.getElementById("delete-report-btn").addEventListener("click", handleDeleteReport);
 
