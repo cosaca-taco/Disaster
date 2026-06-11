@@ -153,10 +153,11 @@ function applyFiltersAndRender() {
 function renderTable(reports) {
   const tbody = document.querySelector("#report-table tbody");
   tbody.innerHTML = "";
-  reports.forEach((report, index) => {
+  reports.forEach((report) => {
+    const no = allReports.length - allReports.indexOf(report);
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td><button type="button" class="report-no-btn" title="地図上の位置を表示">${index + 1}</button></td>
+      <td><button type="button" class="report-no-btn" title="地図上の位置を表示">${no}</button></td>
       <td>${escapeHtml(report.reportedAt)}</td>
       <td><img src="${report.imageUrl}" alt="報告画像"></td>
       <td><button type="button" class="detail-btn">More</button></td>
