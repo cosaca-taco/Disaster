@@ -244,12 +244,20 @@ function renderDetail(report) {
   if (history.length === 0) {
     historyList.innerHTML = '<li class="history-meta">対応履歴はまだありません</li>';
   } else {
-    history.forEach((entry) => {
+    history.forEach((entry, reversedIdx) => {
+      const totalEntries = report.statusHistory.length;
+      const originalIndex = totalEntries - 1 - reversedIdx;
       const imgIndex = entry.imageUrl ? allImages.indexOf(entry.imageUrl) : -1;
       const li = document.createElement("li");
       li.innerHTML = `
-        <div><strong>${escapeHtml(entry.status)}</strong></div>
-        ${entry.note ? `<div>${escapeHtml(entry.note)}</div>` : ""}
+        <div class="history-entry-header">
+          <strong>${escapeHtml(entry.status)}</strong>
+          <div class="history-actions">
+            <button type="button" class="history-edit-btn" data-index="${originalIndex}">編集</button>
+            <button type="button" class="history-delete-btn" data-index="${originalIndex}">削除</button>
+          </div>
+        </div>
+        ${entry.note ? `<div class="history-note">${escapeHtml(entry.note)}</div>` : ""}
         ${entry.imageUrl ? `<img src="${escapeHtml(entry.imageUrl)}" alt="対応画像" class="thumb-img history-thumb" data-img-index="${imgIndex}">` : ""}
         <div class="history-meta">${escapeHtml(formatHistoryTime(entry.updatedAt))}</div>
       `;
@@ -283,6 +291,102 @@ async function handleDeleteReport() {
   }
   activeReportId = null;
   closeModal("detail-modal");
+}
+
+async function handleDeleteHistoryEntry(originalIndex) {
+  if (!activeReportId) return;
+  const report = allReports.find((r) => r.id === activeReportId);
+  if (!report || !Array.isArray(report.statusHistory)) return;
+  if (!confirm("この対応履歴を削除しますか？")) return;
+
+  const entry = report.statusHistory[originalIndex];
+  const newHistory = report.statusHistory.filter((_, i) => i !== originalIndex);
+  await updateDoc(doc(db, "reports", activeReportId), { statusHistory: newHistory });
+  if (entry && entry.imagePath) {
+    await deleteObject(ref(storage, entry.imagePath)).catch(() => {});
+  }
+}
+
+function showHistoryEditForm(li, entry, originalIndex) {
+  li.dataset.editIndex = originalIndex;
+  li.innerHTML = `
+    <form class="history-edit-form">
+      <label class="history-edit-label">対応状況
+        <select class="history-edit-status">
+          ${["未対応", "対応中", "対応済み"].map((s) =>
+            `<option value="${s}"${entry.status === s ? " selected" : ""}>${s}</option>`
+          ).join("")}
+        </select>
+      </label>
+      <label class="history-edit-label">メモ
+        <textarea class="history-edit-note" rows="2">${escapeHtml(entry.note || "")}</textarea>
+      </label>
+      ${entry.imageUrl ? `
+        <div class="history-edit-current">
+          <img src="${escapeHtml(entry.imageUrl)}" alt="" class="history-thumb">
+          <label class="history-edit-label history-remove-label">
+            <input type="checkbox" class="history-remove-img"> 画像を削除する
+          </label>
+        </div>
+      ` : ""}
+      <label class="history-edit-label">新しい画像（任意）
+        <input type="file" class="history-edit-image" accept="image/*">
+      </label>
+      <div class="history-edit-btns">
+        <button type="submit" class="secondary-btn">保存</button>
+        <button type="button" class="history-edit-cancel toggle-btn">キャンセル</button>
+      </div>
+      <p class="history-edit-message hint"></p>
+    </form>
+  `;
+}
+
+async function handleHistoryEditSubmit(form, originalIndex) {
+  if (!activeReportId) return;
+  const report = allReports.find((r) => r.id === activeReportId);
+  if (!report || !Array.isArray(report.statusHistory)) return;
+
+  const entry = report.statusHistory[originalIndex];
+  const newStatus = form.querySelector(".history-edit-status").value;
+  const newNote = form.querySelector(".history-edit-note").value.trim();
+  const removeImg = form.querySelector(".history-remove-img")?.checked || false;
+  const imageFile = form.querySelector(".history-edit-image").files[0];
+  const message = form.querySelector(".history-edit-message");
+  const submitBtn = form.querySelector("button[type=submit]");
+
+  submitBtn.disabled = true;
+  message.textContent = imageFile ? "画像をアップロード中..." : "";
+
+  let imageUrl = entry.imageUrl || null;
+  let imagePath = entry.imagePath || null;
+
+  if (removeImg || imageFile) {
+    if (entry.imagePath) await deleteObject(ref(storage, entry.imagePath)).catch(() => {});
+    imageUrl = null;
+    imagePath = null;
+  }
+
+  if (imageFile) {
+    try {
+      const uploadFile = await compressImage(imageFile);
+      const ext = (uploadFile.name.split(".").pop() || "jpg").toLowerCase();
+      imagePath = `reports/${crypto.randomUUID()}.${ext}`;
+      const storageRef = ref(storage, imagePath);
+      await uploadBytes(storageRef, uploadFile, { contentType: uploadFile.type });
+      imageUrl = await getDownloadURL(storageRef);
+    } catch (err) {
+      message.textContent = "画像のアップロードに失敗しました。";
+      submitBtn.disabled = false;
+      return;
+    }
+  }
+
+  const newEntry = { status: newStatus, note: newNote, updatedAt: entry.updatedAt };
+  if (imageUrl) { newEntry.imageUrl = imageUrl; newEntry.imagePath = imagePath; }
+
+  const newHistory = [...report.statusHistory];
+  newHistory[originalIndex] = newEntry;
+  await updateDoc(doc(db, "reports", activeReportId), { statusHistory: newHistory });
 }
 
 async function handleStatusUpdateSubmit(event) {
@@ -620,6 +724,33 @@ function initApp() {
     checkbox.addEventListener("change", applyFiltersAndRender);
   });
   document.getElementById("signout-btn").addEventListener("click", handleSignOut);
+
+  // 対応履歴の編集・削除
+  document.getElementById("status-history-list").addEventListener("click", (e) => {
+    const deleteBtn = e.target.closest(".history-delete-btn");
+    const editBtn = e.target.closest(".history-edit-btn");
+    const cancelBtn = e.target.closest(".history-edit-cancel");
+    if (deleteBtn) {
+      handleDeleteHistoryEntry(parseInt(deleteBtn.dataset.index));
+    } else if (editBtn) {
+      const li = editBtn.closest("li");
+      const originalIndex = parseInt(editBtn.dataset.index);
+      const report = allReports.find((r) => r.id === activeReportId);
+      if (report && report.statusHistory[originalIndex]) {
+        showHistoryEditForm(li, report.statusHistory[originalIndex], originalIndex);
+      }
+    } else if (cancelBtn) {
+      const report = allReports.find((r) => r.id === activeReportId);
+      if (report) renderDetail(report);
+    }
+  });
+  document.getElementById("status-history-list").addEventListener("submit", (e) => {
+    const form = e.target.closest(".history-edit-form");
+    if (!form) return;
+    e.preventDefault();
+    const li = form.closest("li");
+    handleHistoryEditSubmit(form, parseInt(li.dataset.editIndex));
+  });
 
   // ライトボックス
   document.getElementById("detail-modal").addEventListener("click", (e) => {

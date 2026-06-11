@@ -411,6 +411,33 @@ td img { max-width: 80px; max-height: 80px; border-radius: 4px; display: block; 
   border-radius: 0 4px 4px 0;
 }
 #status-history-list .history-meta { color: #666; font-size: 0.8rem; }
+.history-entry-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.history-note { margin: 4px 0 2px; }
+.history-actions { display: flex; gap: 4px; flex-shrink: 0; }
+.history-edit-btn { background: #2c7fb8; font-size: 0.75rem; padding: 3px 8px; }
+.history-edit-btn:hover { background: #25638f; }
+.history-delete-btn { background: #962d22; font-size: 0.75rem; padding: 3px 8px; }
+.history-delete-btn:hover { background: #7a241b; }
+.history-edit-form { display: flex; flex-direction: column; gap: 8px; }
+.history-edit-label { display: block; font-weight: bold; font-size: 0.85rem; }
+.history-edit-label select,
+.history-edit-label textarea,
+.history-edit-label input[type="file"] {
+  display: block; width: 100%; margin-top: 3px;
+  padding: 6px; border: 1px solid #ccc; border-radius: 4px;
+  font-size: 0.85rem; font-weight: normal;
+}
+.history-edit-current { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+.history-remove-label { font-weight: normal; font-size: 0.82rem; }
+.history-remove-label input[type="checkbox"] { width: auto; }
+.history-edit-btns { display: flex; gap: 8px; }
+.history-edit-btns button { flex: 1; margin: 0; }
+.history-edit-message { margin: 0; }
 
 /* スマートフォン向けレイアウト */
 @media (max-width: 768px) {
