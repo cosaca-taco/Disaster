@@ -1,73 +1,207 @@
-# 災害位置情報報告システム（Firebase版）
+# 災害位置情報報告システム
 
-画像をアップロードすると、ブラウザ側でEXIFからGPS位置情報を抽出し、地図上に表示します。
-あわせて、報告時刻・被害情報・対応状況を Firestore（データベース）と Firebase Storage（画像保存）に記録・更新できます。
+画像をアップロードするとEXIFからGPS座標を自動抽出し、地図上にマーカー表示します。被害情報・対応状況をリアルタイムで記録・共有できるシステムです。サーバー不要で Firebase Hosting にデプロイするだけで動作します。
 
-サーバーは不要で、Firebase Hosting にデプロイするだけで動作する静的サイト構成です。
+---
 
-## 構成
+## 機能一覧
 
-- **Firestore**: 報告データ（位置情報・報告時刻・被害情報・対応状況など）の保存
-- **Firebase Storage**: アップロードされた画像の保存
-- **Firebase Hosting**: 静的サイト（HTML/CSS/JS）の公開
-- **Leaflet + OpenStreetMap**: 地図表示（APIキー不要・無料）
-- **exifr**（CDN経由）: ブラウザ上で画像のEXIFからGPS座標を抽出
+| 機能 | 説明 |
+|------|------|
+| 画像からGPS自動取得 | アップロード時にブラウザ上でEXIF解析（exifr） |
+| 現在地取得 | ボタン1つでスマートフォンのGPS位置を取得（iOS対応済み） |
+| 地図ピッカー | ピンをドラッグして位置を手動修正 |
+| 画像圧縮 | 最長辺1600px・JPEG 80%でブラウザ内圧縮（通信量削減） |
+| 地図表示 | OpenStreetMap + Leaflet（APIキー不要・無料） |
+| 対応状況管理 | 未対応 / 対応中 / 対応済み の3ステップ管理 |
+| 対応履歴 | 更新ごとにメモ・画像付きで履歴を記録 |
+| 履歴編集・削除 | 誤った履歴エントリの修正・削除 |
+| 絞り込み表示 | 対応状況でリストをフィルタリング |
+| 認証 | Firebase Authentication（メール＋パスワード） |
+| リアルタイム同期 | 複数ユーザーの更新が即座に全員の画面に反映 |
+| スマートフォン対応 | モバイルファーストのレスポンシブデザイン |
 
-## セットアップ
+---
 
-### 1. Firebase プロジェクトを準備
+## 技術構成
+
+```
+Firebase Hosting  ← 静的ファイル（HTML / CSS / JS）を配信
+Firebase Firestore ← 報告データのリアルタイムDB
+Firebase Storage  ← 画像ファイルの保存
+Firebase Auth     ← ユーザー認証（メール＋パスワード）
+Leaflet + OpenStreetMap ← 地図表示
+exifr（CDN）      ← 画像EXIFのGPS座標抽出
+```
+
+---
+
+## ファイル構成
+
+```
+/
+├── public/
+│   ├── index.html   # UIのHTML構造
+│   ├── style.css    # スタイルシート
+│   ├── app.js       # アプリケーションロジック
+│   └── config.js    # ★ 自治体設定・Firebase設定（ここだけ変更）
+├── firestore.rules  # Firestoreセキュリティルール
+├── storage.rules    # Storageセキュリティルール
+└── firebase.json    # Firebaseプロジェクト設定
+```
+
+---
+
+## 別の自治体でセットアップする手順
+
+### ステップ 1：リポジトリをクローン
+
+```bash
+git clone https://github.com/cosaca-taco/Disaster.git
+cd Disaster
+```
+
+### ステップ 2：Firebase プロジェクトを作成
+
+1. [Firebase コンソール](https://console.firebase.google.com/) を開く
+2. 「プロジェクトを追加」→ プロジェクト名を入力（例: `disaster-○○city`）
+3. 左メニューから以下を順番に有効化：
+   - **Authentication** → ログイン方法 → 「メール / パスワード」を有効にする
+   - **Firestore Database** → データベースを作成 → 本番環境モード → リージョンは `asia-northeast1`（東京）を推奨
+   - **Storage** → 開始する → リージョンは `asia-northeast1`
+
+### ステップ 3：Firebase CLIをセットアップ
 
 ```bash
 npm install -g firebase-tools
 firebase login
-firebase init
+firebase use --add
+# プロジェクトを選択し、エイリアス名（例: default）を設定
 ```
 
-Firestore, Storage, Hosting を有効にし、`.firebaserc` の `your-firebase-project-id` を実際のプロジェクトIDに置き換えてください。
+または `.firebaserc` を直接編集：
 
-### 2. 設定値を入力
+```json
+{
+  "projects": {
+    "default": "your-firebase-project-id"
+  }
+}
+```
 
-`public/config.js` を編集し、Firebase コンソールで取得した設定値を設定します。
+### ステップ 4：`public/config.js` を編集（★ここが核心）
+
+Firebase コンソール →「プロジェクトの設定」→「全般」→「マイアプリ」から設定値を取得して入力します。
 
 ```js
+// public/config.js
+
 export const firebaseConfig = {
-  apiKey: "...",
-  authDomain: "...",
-  projectId: "...",
-  storageBucket: "...",
-  messagingSenderId: "...",
-  appId: "...",
+  apiKey: "AIzaSy...",
+  authDomain: "your-project.firebaseapp.com",
+  projectId: "your-project",
+  storageBucket: "your-project.firebasestorage.app",
+  messagingSenderId: "000000000000",
+  appId: "1:000000000000:web:xxxxxxxxxxxx",
+};
+
+export const siteConfig = {
+  // 画面に表示する自治体名
+  orgName: "○○市",
+
+  // 地図の初期表示位置（市役所付近の緯度・経度を設定）
+  mapCenter: [緯度, 経度],
+  mapZoom: 12,
+
+  // 位置情報未設定時にピッカーが開く位置（通常は mapCenter と同じでよい）
+  pickerDefaultCenter: [緯度, 経度],
+  pickerDefaultZoom: 12,
 };
 ```
 
-地図表示には Leaflet + OpenStreetMap を使用しているため、APIキーや課金設定は不要です。
+> **緯度・経度の調べ方**: Google マップで市役所を右クリック → 表示される数値（例: 35.4495, 137.4111）をコピーする
 
-### 3. ローカルで動作確認
-
-```bash
-firebase emulators:start
-```
-
-または
+### ステップ 5：セキュリティルールをデプロイ
 
 ```bash
-firebase serve
+firebase deploy --only firestore:rules,storage
 ```
 
-### 4. デプロイ
+### ステップ 6：最初のユーザーアカウントを作成
+
+Firebase コンソール → Authentication → Users → 「ユーザーを追加」から担当者のメールアドレスとパスワードを登録します。
+
+> ユーザー登録はコンソールから行ってください。登録画面は公開されていますが、Firestoreルールによりログインしないとデータにアクセスできません。
+
+### ステップ 7：ホスティングにデプロイ
 
 ```bash
-firebase deploy
+firebase deploy --only hosting
 ```
 
-## 機能
+デプロイ完了後に表示される URL（`https://your-project.web.app`）でアクセスできます。
 
-- 画像選択時にブラウザ上でEXIFのGPS情報を自動抽出（取得できない場合は緯度・経度の手入力や現在地取得が可能）
-- アップロード前にブラウザ上で画像を圧縮（最長辺1600px・JPEG品質80%にリサイズ/再エンコード）し、保存容量と通信量を削減
-- 地図（OpenStreetMap）上に被害箇所をマーカー表示（クリックで詳細を表示）
-- 報告時刻・被害情報・対応状況（未対応／対応中／対応済み）を Firestore に登録
-- 一覧画面から対応状況の更新・報告の削除が可能（Firestore はリアルタイム同期）
+---
+
+## ユーザー管理
+
+ユーザーの追加・削除は **Firebase コンソール → Authentication → Users** から行います。
+
+- パスワードリセットはログイン画面の「パスワードを忘れた場合」から利用者自身が実行できます
+- 現時点では全ログインユーザーが同じ権限を持ちます（管理者ロールは未実装）
+
+---
+
+## 設定値リファレンス（`siteConfig`）
+
+| キー | 型 | 説明 |
+|------|----|------|
+| `orgName` | string | 自治体名。タイトルバー・ログイン画面に表示 |
+| `mapCenter` | [number, number] | 地図初期表示の中心座標 `[緯度, 経度]` |
+| `mapZoom` | number | 地図初期ズームレベル（12〜14が市区町村レベルの目安） |
+| `pickerDefaultCenter` | [number, number] | 位置情報未設定時にピッカーが開く座標 |
+| `pickerDefaultZoom` | number | ピッカーが開く際のズームレベル |
+
+---
 
 ## セキュリティに関する注意
 
-`firestore.rules` / `storage.rules` は動作確認用の簡易設定です。本番運用する場合は Firebase Authentication 等を導入し、書き込み・削除を許可されたユーザーのみに制限することを推奨します。
+現在のルールは「ログインユーザーは全データを読み書きできる」設定です。
+
+```
+firestore.rules  ← ログイン必須・更新は status と statusHistory のみ許可
+storage.rules    ← ログイン必須・最大15MB・画像ファイルのみ許可
+```
+
+本番運用前に以下を検討してください：
+
+- **投稿者本人のみ削除可能**にするには、Firestoreドキュメントに `createdBy: uid` を保存してルールで照合する
+- **管理者ロールの分離**が必要な場合は、Firestore に `/users/{uid}` コレクションを作成して `role` フィールドで制御する
+
+---
+
+## 複数自治体での運用について
+
+### 推奨：Firebase プロジェクトを自治体ごとに分ける
+
+| メリット | デメリット |
+|---------|-----------|
+| データが完全に分離される | プロジェクト数が増える |
+| 障害が他自治体に波及しない | Firebase コンソール管理が分散する |
+| 無料枠（Sparkプラン）を各自治体で利用できる | デプロイ作業を自治体ごとに実施する必要がある |
+
+別自治体での導入は `public/config.js` の `firebaseConfig` と `siteConfig` を書き換えてデプロイするだけです（所要時間：30分〜1時間程度）。
+
+---
+
+## ローカル開発
+
+```bash
+# エミュレーターで完全オフライン動作（Firestore・Storage・Auth含む）
+firebase emulators:start
+
+# Hostingのみプレビュー（Firebaseは本番を使用）
+firebase serve
+```
+
+エミュレーター使用時は `public/config.js` の `connectEmulators` フラグを有効化する必要があります（現状は未実装）。
