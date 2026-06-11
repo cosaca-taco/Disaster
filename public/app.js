@@ -1,4 +1,4 @@
-import { firebaseConfig } from "./config.js";
+import { firebaseConfig, siteConfig } from "./config.js";
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
@@ -77,6 +77,12 @@ const reportsCollection = collection(db, "reports");
 
 let currentUser = null;
 
+// タイトルをsiteConfigから設定
+const fullTitle = `Disaster Location Report -${siteConfig.orgName}-`;
+document.title = fullTitle;
+document.getElementById("site-title").textContent = fullTitle;
+document.getElementById("auth-subtitle").textContent = `-${siteConfig.orgName}-`;
+
 let map;
 let markers = [];
 let markersById = new Map();
@@ -84,7 +90,7 @@ let allReports = [];
 let activeReportId = null;
 
 function initMap() {
-  map = L.map("map").setView([35.681236, 139.767125], 6);
+  map = L.map("map").setView(siteConfig.mapCenter, siteConfig.mapZoom);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     maxZoom: 19,
@@ -583,17 +589,18 @@ function openPicker() {
   const hasCoords = status.dataset.lat && status.dataset.lng;
   const center = hasCoords
     ? [Number(status.dataset.lat), Number(status.dataset.lng)]
-    : [35.681236, 139.767125];
+    : siteConfig.pickerDefaultCenter;
+  const zoom = hasCoords ? 15 : siteConfig.pickerDefaultZoom;
 
   // すでに初期化済みなら中心だけ更新
   if (pickerMap) {
-    pickerMap.setView(center, hasCoords ? 15 : 10);
+    pickerMap.setView(center, zoom);
     pickerMarker.setLatLng(center);
     pickerMap.invalidateSize();
     return;
   }
 
-  pickerMap = L.map("picker-map").setView(center, hasCoords ? 15 : 10);
+  pickerMap = L.map("picker-map").setView(center, zoom);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     maxZoom: 19,

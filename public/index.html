@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Disaster Location Report -ENA City-</title>
+<title>Disaster Location Report</title>
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
   integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 </head>
 <body>
 <header>
-  <h1>Disaster Location Report -ENA City-</h1>
+  <h1 id="site-title">Disaster Location Report</h1>
   <div id="user-info" class="user-info hidden">
     <span id="user-email"></span>
     <button type="button" id="signout-btn" class="signout-btn">サインアウト</button>
@@ -21,7 +21,7 @@
 <div id="auth-screen">
   <div class="auth-card">
     <h2>Disaster Location Report</h2>
-    <p class="auth-subtitle">-ENA City-</p>
+    <p id="auth-subtitle" class="auth-subtitle"></p>
 
     <div class="auth-tabs">
       <button type="button" class="auth-tab active" data-tab="login">ログイン</button>
