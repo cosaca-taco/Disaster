@@ -165,7 +165,12 @@
         メモ（任意）
         <textarea id="status-update-note" rows="2" placeholder="対応内容など"></textarea>
       </label>
-      <button type="submit" class="primary-btn">対応状況を追加</button>
+      <label>
+        画像（任意）
+        <input type="file" id="status-image-input" accept="image/*">
+      </label>
+      <button type="submit" id="status-update-submit" class="primary-btn">対応状況を追加</button>
+      <p id="status-update-message" class="hint"></p>
     </form>
 
     <h3>対応履歴</h3>
@@ -173,6 +178,17 @@
 
     <button type="button" id="delete-report-btn" class="danger-btn">この報告を削除</button>
   </div>
+</div>
+
+<!-- ライトボックス -->
+<div id="lightbox" class="lightbox-overlay hidden">
+  <div class="lightbox-inner">
+    <button type="button" class="lightbox-nav lightbox-prev">&#8249;</button>
+    <img id="lightbox-img" src="" alt="">
+    <button type="button" class="lightbox-nav lightbox-next">&#8250;</button>
+  </div>
+  <button type="button" class="lightbox-close">×</button>
+  <div id="lightbox-counter" class="lightbox-counter"></div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"

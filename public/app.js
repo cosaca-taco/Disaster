@@ -36,6 +36,39 @@ const STATUSES = ["未対応", "対応中", "対応済み"];
 let pickerMap = null;
 let pickerMarker = null;
 
+let lightboxImages = [];
+let lightboxIndex = 0;
+
+function openLightbox(images, index = 0) {
+  lightboxImages = images;
+  lightboxIndex = index;
+  updateLightbox();
+  document.getElementById("lightbox").classList.remove("hidden");
+}
+
+function closeLightbox() {
+  document.getElementById("lightbox").classList.add("hidden");
+}
+
+function updateLightbox() {
+  document.getElementById("lightbox-img").src = lightboxImages[lightboxIndex];
+  const counter = document.getElementById("lightbox-counter");
+  const multi = lightboxImages.length > 1;
+  counter.textContent = multi ? `${lightboxIndex + 1} / ${lightboxImages.length}` : "";
+  document.querySelector(".lightbox-prev").style.visibility = multi ? "visible" : "hidden";
+  document.querySelector(".lightbox-next").style.visibility = multi ? "visible" : "hidden";
+}
+
+function lightboxPrev() {
+  lightboxIndex = (lightboxIndex - 1 + lightboxImages.length) % lightboxImages.length;
+  updateLightbox();
+}
+
+function lightboxNext() {
+  lightboxIndex = (lightboxIndex + 1) % lightboxImages.length;
+  updateLightbox();
+}
+
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp);
 const storage = getStorage(firebaseApp);
@@ -180,6 +213,13 @@ function formatHistoryTime(value) {
 }
 
 function renderDetail(report) {
+  // 全画像リスト（ライトボックス用）: 元画像 + 履歴画像の順
+  const allImages = [];
+  if (report.imageUrl) allImages.push(report.imageUrl);
+  if (Array.isArray(report.statusHistory)) {
+    report.statusHistory.forEach((entry) => { if (entry.imageUrl) allImages.push(entry.imageUrl); });
+  }
+
   const content = document.getElementById("detail-content");
   content.innerHTML = `
     <dl>
@@ -188,11 +228,15 @@ function renderDetail(report) {
       <dt>位置</dt><dd>${report.latitude.toFixed(5)}, ${report.longitude.toFixed(5)}</dd>
       <dt>被害情報</dt><dd>${escapeHtml(report.damageInfo)}</dd>
       <dt>現在の対応状況</dt><dd>${escapeHtml(report.status)}</dd>
-      <dt>画像</dt><dd><img src="${report.imageUrl}" alt="報告画像"></dd>
+      <dt>画像</dt><dd>
+        <img src="${escapeHtml(report.imageUrl)}" alt="報告画像" class="thumb-img" data-img-index="0">
+      </dd>
     </dl>
   `;
+  content.dataset.allImages = JSON.stringify(allImages);
 
   document.getElementById("status-update-select").value = report.status;
+  document.getElementById("status-update-message").textContent = "";
 
   const historyList = document.getElementById("status-history-list");
   historyList.innerHTML = "";
@@ -201,10 +245,12 @@ function renderDetail(report) {
     historyList.innerHTML = '<li class="history-meta">対応履歴はまだありません</li>';
   } else {
     history.forEach((entry) => {
+      const imgIndex = entry.imageUrl ? allImages.indexOf(entry.imageUrl) : -1;
       const li = document.createElement("li");
       li.innerHTML = `
         <div><strong>${escapeHtml(entry.status)}</strong></div>
         ${entry.note ? `<div>${escapeHtml(entry.note)}</div>` : ""}
+        ${entry.imageUrl ? `<img src="${escapeHtml(entry.imageUrl)}" alt="対応画像" class="thumb-img history-thumb" data-img-index="${imgIndex}">` : ""}
         <div class="history-meta">${escapeHtml(formatHistoryTime(entry.updatedAt))}</div>
       `;
       historyList.appendChild(li);
@@ -230,6 +276,11 @@ async function handleDeleteReport() {
   if (report.imagePath) {
     await deleteObject(ref(storage, report.imagePath)).catch(() => {});
   }
+  if (Array.isArray(report.statusHistory)) {
+    for (const entry of report.statusHistory) {
+      if (entry.imagePath) await deleteObject(ref(storage, entry.imagePath)).catch(() => {});
+    }
+  }
   activeReportId = null;
   closeModal("detail-modal");
 }
@@ -240,17 +291,46 @@ async function handleStatusUpdateSubmit(event) {
 
   const newStatus = document.getElementById("status-update-select").value;
   const note = document.getElementById("status-update-note").value.trim();
+  const imageFile = document.getElementById("status-image-input").files[0];
+  const submitBtn = document.getElementById("status-update-submit");
+  const message = document.getElementById("status-update-message");
+
+  submitBtn.disabled = true;
+  message.textContent = imageFile ? "画像をアップロード中..." : "";
+
+  let imageUrl = null;
+  let imagePath = null;
+  if (imageFile) {
+    try {
+      const uploadFile = await compressImage(imageFile);
+      const ext = (uploadFile.name.split(".").pop() || "jpg").toLowerCase();
+      imagePath = `reports/${crypto.randomUUID()}.${ext}`;
+      const storageRef = ref(storage, imagePath);
+      await uploadBytes(storageRef, uploadFile, { contentType: uploadFile.type });
+      imageUrl = await getDownloadURL(storageRef);
+    } catch (err) {
+      message.textContent = "画像のアップロードに失敗しました。";
+      submitBtn.disabled = false;
+      return;
+    }
+  }
+
+  const entry = {
+    status: newStatus,
+    note,
+    updatedAt: new Date().toISOString(),
+    ...(imageUrl && { imageUrl, imagePath }),
+  };
 
   await updateDoc(doc(db, "reports", activeReportId), {
     status: newStatus,
-    statusHistory: arrayUnion({
-      status: newStatus,
-      note,
-      updatedAt: new Date().toISOString(),
-    }),
+    statusHistory: arrayUnion(entry),
   });
 
   document.getElementById("status-update-note").value = "";
+  document.getElementById("status-image-input").value = "";
+  message.textContent = "";
+  submitBtn.disabled = false;
 }
 
 const COMPRESS_MAX_DIMENSION = 1600;
@@ -540,6 +620,27 @@ function initApp() {
     checkbox.addEventListener("change", applyFiltersAndRender);
   });
   document.getElementById("signout-btn").addEventListener("click", handleSignOut);
+
+  // ライトボックス
+  document.getElementById("detail-modal").addEventListener("click", (e) => {
+    const thumb = e.target.closest(".thumb-img");
+    if (!thumb) return;
+    const images = JSON.parse(document.getElementById("detail-content").dataset.allImages || "[]");
+    const index = parseInt(thumb.dataset.imgIndex, 10);
+    if (images.length > 0) openLightbox(images, isNaN(index) ? 0 : index);
+  });
+  document.getElementById("lightbox").addEventListener("click", (e) => {
+    if (e.target === document.getElementById("lightbox")) closeLightbox();
+  });
+  document.querySelector(".lightbox-close").addEventListener("click", closeLightbox);
+  document.querySelector(".lightbox-prev").addEventListener("click", lightboxPrev);
+  document.querySelector(".lightbox-next").addEventListener("click", lightboxNext);
+  document.addEventListener("keydown", (e) => {
+    if (document.getElementById("lightbox").classList.contains("hidden")) return;
+    if (e.key === "Escape") closeLightbox();
+    else if (e.key === "ArrowLeft") lightboxPrev();
+    else if (e.key === "ArrowRight") lightboxNext();
+  });
 }
 
 // ── 認証 ──────────────────────────────────────────
