@@ -335,12 +335,12 @@ function handleUseCurrentLocation() {
   const button = document.getElementById("use-current-location");
 
   if (!("geolocation" in navigator)) {
-    locationStatus.textContent = "このブラウザでは現在地の取得に対応していません。";
+    locationStatus.innerHTML = "このブラウザでは現在地の取得に対応していません。";
     return;
   }
 
   button.disabled = true;
-  locationStatus.textContent = "現在地を取得しています...";
+  locationStatus.textContent = "現在地を取得しています...（最大20秒かかる場合があります）";
 
   const onSuccess = (position) => {
     const { latitude, longitude } = position.coords;
@@ -351,24 +351,41 @@ function handleUseCurrentLocation() {
     button.disabled = false;
   };
 
-  const onError = (error, highAccuracy) => {
-    if (highAccuracy) {
-      // 高精度で失敗した場合、低精度でリトライ
-      locationStatus.textContent = "GPS取得中（低精度モードで再試行中）...";
-      navigator.geolocation.getCurrentPosition(onSuccess,
-        (err) => {
-          locationStatus.textContent = "現在地を取得できませんでした。設定で位置情報の許可を確認してください。";
-          button.disabled = false;
-        },
-        { enableHighAccuracy: false, timeout: 15000 }
-      );
+  const showFinalError = (err) => {
+    button.disabled = false;
+    // エラーコードに応じてiOS向けの具体的な案内を表示
+    if (err.code === 1) {
+      locationStatus.innerHTML =
+        "⛔ 位置情報の利用が拒否されています。<br>" +
+        "【iPhoneの場合】設定 → プライバシーとセキュリティ → 位置情報サービス → Safari → " +
+        "「このAppの使用中」または「常に」を選択してください。";
+    } else if (err.code === 3) {
+      locationStatus.innerHTML =
+        "⏱ 位置情報の取得がタイムアウトしました。<br>" +
+        "屋外または窓際に移動してから再度お試しください。";
+    } else {
+      locationStatus.textContent =
+        `現在地を取得できませんでした（エラーコード: ${err.code}）。ページを再読み込みしてお試しください。`;
     }
   };
 
+  // まず高精度（GPS）で試し、失敗したら低精度（Wi-Fi/通信）でリトライ
   navigator.geolocation.getCurrentPosition(
     onSuccess,
-    (err) => onError(err, true),
-    { enableHighAccuracy: true, timeout: 10000 }
+    (err) => {
+      if (err.code === 1) {
+        // 権限拒否はリトライ不要
+        showFinalError(err);
+        return;
+      }
+      locationStatus.textContent = "GPS取得中（低精度モードで再試行しています）...";
+      navigator.geolocation.getCurrentPosition(onSuccess, showFinalError, {
+        enableHighAccuracy: false,
+        timeout: 15000,
+        maximumAge: 60000,
+      });
+    },
+    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
   );
 }
 
