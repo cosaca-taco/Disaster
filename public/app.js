@@ -33,6 +33,9 @@ import exifr from "https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.esm.mjs";
 
 const STATUSES = ["未対応", "対応中", "対応済み"];
 
+let pickerMap = null;
+let pickerMarker = null;
+
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp);
 const storage = getStorage(firebaseApp);
@@ -302,8 +305,6 @@ function setCoords(latitude, longitude) {
   const status = document.getElementById("gps-status");
   status.dataset.lat = latitude;
   status.dataset.lng = longitude;
-  document.getElementById("latitude-input").value = latitude;
-  document.getElementById("longitude-input").value = longitude;
 }
 
 function clearCoords() {
@@ -389,24 +390,61 @@ function handleUseCurrentLocation() {
   );
 }
 
-function handleToggleManualCoords() {
-  const manualCoords = document.getElementById("manual-coords");
-  const isHidden = manualCoords.classList.toggle("hidden");
-  document.getElementById("toggle-manual-coords").textContent =
-    isHidden ? "✏️ 座標を修正する" : "✏️ 座標を閉じる";
-}
+function openPicker() {
+  const picker = document.getElementById("location-picker");
+  picker.classList.remove("hidden");
+  document.getElementById("toggle-picker").textContent = "🗺️ 地図を閉じる";
 
-function handleApplyManualCoords() {
-  const lat = parseFloat(document.getElementById("latitude-input").value);
-  const lng = parseFloat(document.getElementById("longitude-input").value);
-  if (isNaN(lat) || isNaN(lng)) {
-    document.getElementById("location-status").textContent = "緯度・経度を正しく入力してください";
+  const status = document.getElementById("gps-status");
+  const hasCoords = status.dataset.lat && status.dataset.lng;
+  const center = hasCoords
+    ? [Number(status.dataset.lat), Number(status.dataset.lng)]
+    : [35.681236, 139.767125];
+
+  // すでに初期化済みなら中心だけ更新
+  if (pickerMap) {
+    pickerMap.setView(center, hasCoords ? 15 : 10);
+    pickerMarker.setLatLng(center);
+    pickerMap.invalidateSize();
     return;
   }
+
+  pickerMap = L.map("picker-map").setView(center, hasCoords ? 15 : 10);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19,
+  }).addTo(pickerMap);
+
+  pickerMarker = L.marker(center, { draggable: true }).addTo(pickerMap);
+
+  // 地図タップでマーカーを移動
+  pickerMap.on("click", (e) => pickerMarker.setLatLng(e.latlng));
+}
+
+function closePicker() {
+  document.getElementById("location-picker").classList.add("hidden");
+  document.getElementById("toggle-picker").textContent = "🗺️ 地図で位置を修正する";
+}
+
+function handleTogglePicker() {
+  const picker = document.getElementById("location-picker");
+  if (picker.classList.contains("hidden")) {
+    openPicker();
+    // 地図の描画サイズ確定のため少し待つ
+    setTimeout(() => pickerMap && pickerMap.invalidateSize(), 150);
+  } else {
+    closePicker();
+  }
+}
+
+function handleApplyPickerCoords() {
+  if (!pickerMarker) return;
+  const { lat, lng } = pickerMarker.getLatLng();
   setCoords(lat, lng);
   document.getElementById("gps-status").textContent =
-    `✏️ 座標を手入力しました（緯度: ${lat.toFixed(5)}, 経度: ${lng.toFixed(5)}）`;
+    `🗺️ 地図で位置を指定しました（緯度: ${lat.toFixed(5)}, 経度: ${lng.toFixed(5)}）`;
   document.getElementById("location-status").textContent = "";
+  closePicker();
 }
 
 async function handleSubmit(event) {
@@ -462,8 +500,7 @@ async function handleSubmit(event) {
     setDefaultReportedAt();
     status.textContent = "";
     clearCoords();
-    document.getElementById("manual-coords").classList.add("hidden");
-    document.getElementById("toggle-manual-coords").textContent = "✏️ 座標を修正する";
+    closePicker();
     document.getElementById("location-status").textContent = "";
     closeModal("new-report-modal");
   } catch (err) {
@@ -484,8 +521,8 @@ function initApp() {
   document.getElementById("report-form").addEventListener("submit", handleSubmit);
   document.getElementById("image-input").addEventListener("change", handleImageChange);
   document.getElementById("use-current-location").addEventListener("click", handleUseCurrentLocation);
-  document.getElementById("toggle-manual-coords").addEventListener("click", handleToggleManualCoords);
-  document.getElementById("apply-manual-coords").addEventListener("click", handleApplyManualCoords);
+  document.getElementById("toggle-picker").addEventListener("click", handleTogglePicker);
+  document.getElementById("apply-picker-coords").addEventListener("click", handleApplyPickerCoords);
   document.getElementById("status-update-form").addEventListener("submit", handleStatusUpdateSubmit);
   document.getElementById("delete-report-btn").addEventListener("click", handleDeleteReport);
 
