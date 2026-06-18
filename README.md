@@ -18,6 +18,7 @@
 | 履歴編集・削除 | 誤った履歴エントリの修正・削除 |
 | 絞り込み表示 | 対応状況でリストをフィルタリング |
 | 認証 | Firebase Authentication（メール＋パスワード） |
+| メール通知 | 新規報告・対応状況更新・管理者からのお知らせを全ユーザーにメール送信 |
 | リアルタイム同期 | 複数ユーザーの更新が即座に全員の画面に反映 |
 | スマートフォン対応 | モバイルファーストのレスポンシブデザイン |
 
@@ -140,6 +141,74 @@ firebase deploy --only hosting
 ```
 
 デプロイ完了後に表示される URL（`https://your-project.web.app`）でアクセスできます。
+
+---
+
+## メール通知のセットアップ（任意）
+
+以下のタイミングで、Firebase Authentication に登録された全ユーザーにメール通知を送信できます。
+
+- 新規報告が登録されたとき
+- 対応状況が更新されたとき（未対応 → 対応中 など）
+- 管理者が画面右上の「📢 お知らせ送信」から任意のメッセージを送信したとき（警報発令時など）
+
+メール送信には [SendGrid](https://sendgrid.com/) を使用します（無料プランで1日100件まで送信可能）。
+
+### 1. Blazeプランへのアップグレード
+
+Cloud Functions の利用には **Blazeプラン（従量課金）** が必要です。Firebase コンソール → 左下「プランをアップグレード」から変更してください。少量の利用であれば月額数百円程度です。
+
+### 2. SendGridのセットアップ
+
+1. [SendGrid](https://sendgrid.com/) でアカウントを作成
+2. Settings → API Keys → API キーを作成（Full Access）
+3. Settings → Sender Authentication → 送信元メールアドレスを認証（Single Sender Verification）
+
+### 3. シークレットを登録
+
+```bash
+cd functions
+npm install
+firebase functions:secrets:set SENDGRID_API_KEY
+firebase functions:secrets:set SENDER_EMAIL
+```
+
+`SENDER_EMAIL` には手順2で認証した送信元メールアドレスを入力してください。
+
+### 4. 自治体名・サイトURLを設定
+
+`functions/.env.example` を `functions/.env.<Firebaseプロジェクト ID>` という名前でコピーし、内容を編集します。
+
+```bash
+cp functions/.env.example functions/.env.your-project-id
+```
+
+```env
+SITE_URL=https://your-project.web.app
+ORG_NAME=○○市 災害位置情報報告システム
+```
+
+### 5. デプロイ
+
+```bash
+firebase deploy --only functions
+```
+
+### 通知メールの例
+
+```
+件名: 【○○市 災害位置情報報告システム】新しい報告が登録されました
+
+新しい被害報告が登録されました。
+
+報告時刻: 2026/06/17 14:32
+被害情報: 国道沿いの道路冠水
+位置: 35.44950, 137.41110
+対応状況: 未対応
+
+詳細はシステムでご確認ください。
+https://your-project.web.app
+```
 
 ---
 

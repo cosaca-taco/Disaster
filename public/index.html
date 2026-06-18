@@ -12,6 +12,7 @@
 <header>
   <h1 id="site-title">Disaster Location Report</h1>
   <div id="user-info" class="user-info hidden">
+    <button type="button" id="open-alert-modal" class="signout-btn" title="登録ユーザー全員にメールでお知らせを送信">📢 お知らせ送信</button>
     <span id="user-email"></span>
     <button type="button" id="signout-btn" class="signout-btn">サインアウト</button>
   </div>
@@ -177,6 +178,23 @@
     <ul id="status-history-list"></ul>
 
     <button type="button" id="delete-report-btn" class="danger-btn">この報告を削除</button>
+  </div>
+</div>
+
+<!-- お知らせ送信モーダル -->
+<div id="alert-modal" class="modal-overlay hidden">
+  <div class="modal">
+    <button type="button" class="modal-close" data-close="alert-modal">×</button>
+    <h2>お知らせを送信</h2>
+    <p class="hint">登録されている全ユーザーにメールで通知が送られます。</p>
+    <form id="alert-form">
+      <label>
+        メッセージ
+        <textarea id="alert-message" rows="4" required placeholder="例：大雨警報が発令されました。被害状況の報告をお願いします。"></textarea>
+      </label>
+      <button type="submit" id="send-alert-btn" class="primary-btn">送信する</button>
+      <p id="alert-form-message" class="hint"></p>
+    </form>
   </div>
 </div>
 

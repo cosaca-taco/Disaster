@@ -29,6 +29,10 @@ import {
   sendPasswordResetEmail,
   signOut,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  getFunctions,
+  httpsCallable,
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js";
 import exifr from "https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.esm.mjs";
 
 const STATUSES = ["未対応", "対応中", "対応済み"];
@@ -73,6 +77,7 @@ const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp);
 const storage = getStorage(firebaseApp);
 const auth = getAuth(firebaseApp);
+const functions = getFunctions(firebaseApp, "asia-northeast1");
 const reportsCollection = collection(db, "reports");
 
 let currentUser = null;
@@ -746,6 +751,8 @@ function initApp() {
     checkbox.addEventListener("change", applyFiltersAndRender);
   });
   document.getElementById("signout-btn").addEventListener("click", handleSignOut);
+  document.getElementById("open-alert-modal").addEventListener("click", () => openModal("alert-modal"));
+  document.getElementById("alert-form").addEventListener("submit", handleSendAlert);
 
   // 対応履歴の編集・削除
   document.getElementById("status-history-list").addEventListener("click", (e) => {
@@ -858,6 +865,34 @@ async function handleForgotPassword() {
 
 async function handleSignOut() {
   await signOut(auth);
+}
+
+async function handleSendAlert(event) {
+  event.preventDefault();
+  const textarea = document.getElementById("alert-message");
+  const message = textarea.value.trim();
+  if (!message) return;
+
+  const btn = document.getElementById("send-alert-btn");
+  const msgEl = document.getElementById("alert-form-message");
+  btn.disabled = true;
+  msgEl.textContent = "送信中...";
+
+  try {
+    const sendManualAlert = httpsCallable(functions, "sendManualAlert");
+    await sendManualAlert({ message });
+    msgEl.textContent = "送信しました";
+    textarea.value = "";
+    setTimeout(() => {
+      closeModal("alert-modal");
+      msgEl.textContent = "";
+    }, 1000);
+  } catch (err) {
+    console.error(err);
+    msgEl.textContent = "送信に失敗しました。時間をおいて再度お試しください。";
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 function authErrorMessage(code) {
