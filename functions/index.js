@@ -2,21 +2,30 @@ const { onDocumentCreated, onDocumentUpdated } = require("firebase-functions/v2/
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { defineSecret, defineString } = require("firebase-functions/params");
 const admin = require("firebase-admin");
-const sgMail = require("@sendgrid/mail");
+const nodemailer = require("nodemailer");
 
 admin.initializeApp();
 
 const REGION = "asia-northeast1";
 
-// Firebase Console > Functions > シークレット で設定（または `firebase functions:secrets:set` コマンド）
-const SENDGRID_API_KEY = defineSecret("SENDGRID_API_KEY");
-// SendGridで送信者として認証済みのメールアドレス（Single Sender Verification 等）
-const SENDER_EMAIL = defineSecret("SENDER_EMAIL");
+// Gmail / Google Workspace の送信元アドレスとアプリパスワード
+// `firebase functions:secrets:set GMAIL_USER` / `GMAIL_APP_PASSWORD` で設定
+const GMAIL_USER = defineSecret("GMAIL_USER");
+const GMAIL_APP_PASSWORD = defineSecret("GMAIL_APP_PASSWORD");
 
-// 非機密の設定値。`firebase functions:config` ではなく .env.<project-id> に書くか、
-// デプロイ時のプロンプトで入力する（params のデフォルト値が使われる）
+// 非機密の設定値。functions/.env.<project-id> に書く（params のデフォルト値が使われる）
 const SITE_URL = defineString("SITE_URL", { default: "https://your-project.web.app" });
 const ORG_NAME = defineString("ORG_NAME", { default: "災害位置情報報告システム" });
+
+function getTransporter() {
+  return nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: GMAIL_USER.value(),
+      pass: GMAIL_APP_PASSWORD.value(),
+    },
+  });
+}
 
 async function getAllUserEmails() {
   const emails = [];
@@ -35,20 +44,21 @@ async function sendBroadcast(subject, text) {
   const emails = await getAllUserEmails();
   if (emails.length === 0) return;
 
-  sgMail.setApiKey(SENDGRID_API_KEY.value());
-  const messages = emails.map((to) => ({
-    to,
-    from: SENDER_EMAIL.value(),
-    subject,
-    text,
-  }));
-  // SendGridは1回のsend呼び出しでBCC的に個別送信される（宛先同士は見えない）
-  await sgMail.send(messages, true);
+  const transporter = getTransporter();
+  // 宛先同士が見えないよう、1人ずつ個別に送信（BCC送信ではなく逐次送信）
+  for (const to of emails) {
+    await transporter.sendMail({
+      from: `"${ORG_NAME.value()}" <${GMAIL_USER.value()}>`,
+      to,
+      subject,
+      text,
+    });
+  }
 }
 
 // 新規報告が登録されたら全ユーザーに通知
 exports.onReportCreated = onDocumentCreated(
-  { document: "reports/{reportId}", region: REGION, secrets: [SENDGRID_API_KEY, SENDER_EMAIL] },
+  { document: "reports/{reportId}", region: REGION, secrets: [GMAIL_USER, GMAIL_APP_PASSWORD] },
   async (event) => {
     const report = event.data.data();
     if (!report) return;
@@ -72,7 +82,7 @@ exports.onReportCreated = onDocumentCreated(
 
 // 対応状況（status）が変更されたら全ユーザーに通知
 exports.onReportStatusUpdated = onDocumentUpdated(
-  { document: "reports/{reportId}", region: REGION, secrets: [SENDGRID_API_KEY, SENDER_EMAIL] },
+  { document: "reports/{reportId}", region: REGION, secrets: [GMAIL_USER, GMAIL_APP_PASSWORD] },
   async (event) => {
     const before = event.data.before.data();
     const after = event.data.after.data();
@@ -95,7 +105,7 @@ exports.onReportStatusUpdated = onDocumentUpdated(
 
 // 管理者がWeb画面から任意のメッセージを全ユーザーに送信（警報など）
 exports.sendManualAlert = onCall(
-  { region: REGION, secrets: [SENDGRID_API_KEY, SENDER_EMAIL] },
+  { region: REGION, secrets: [GMAIL_USER, GMAIL_APP_PASSWORD] },
   async (request) => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "ログインが必要です");

@@ -152,28 +152,31 @@ firebase deploy --only hosting
 - 対応状況が更新されたとき（未対応 → 対応中 など）
 - 管理者が画面右上の「📢 お知らせ送信」から任意のメッセージを送信したとき（警報発令時など）
 
-メール送信には [SendGrid](https://sendgrid.com/) を使用します（無料プランで1日100件まで送信可能）。
+メール送信には自治体・組織が持つ **Gmail / Google Workspace のメールアドレス**を使用します（個人Gmailは1日500件、Google Workspaceは1日2000件まで送信可能。追加費用なし）。
 
 ### 1. Blazeプランへのアップグレード
 
 Cloud Functions の利用には **Blazeプラン（従量課金）** が必要です。Firebase コンソール → 左下「プランをアップグレード」から変更してください。少量の利用であれば月額数百円程度です。
 
-### 2. SendGridのセットアップ
+### 2. Googleアカウントの準備
 
-1. [SendGrid](https://sendgrid.com/) でアカウントを作成
-2. Settings → API Keys → API キーを作成（Full Access）
-3. Settings → Sender Authentication → 送信元メールアドレスを認証（Single Sender Verification）
+1. 送信元として使うGoogleアカウント（Google Workspaceの自治体ドメインアドレス、または個人Gmail）で **2段階認証を有効化**する（[アカウント設定](https://myaccount.google.com/security)）
+2. 同ページの「アプリパスワード」から新しいアプリパスワードを生成する（アプリ名は「メール」などわかりやすい名前でよい）
+3. 表示された16桁のパスワードをコピーしておく（このあとの手順でのみ使用）
+
+> Google Workspaceを利用している場合、組織の管理者が「セキュリティ → APIの制御」でアプリパスワードの利用を許可している必要があります。許可されていない場合は管理者に依頼してください。
 
 ### 3. シークレットを登録
 
 ```bash
 cd functions
 npm install
-firebase functions:secrets:set SENDGRID_API_KEY
-firebase functions:secrets:set SENDER_EMAIL
+firebase functions:secrets:set GMAIL_USER
+firebase functions:secrets:set GMAIL_APP_PASSWORD
 ```
 
-`SENDER_EMAIL` には手順2で認証した送信元メールアドレスを入力してください。
+- `GMAIL_USER`：送信元として使うメールアドレス（例: `bousai@your-city.go.jp`）
+- `GMAIL_APP_PASSWORD`：手順2で生成した16桁のアプリパスワード（スペースは入力しない）
 
 ### 4. 自治体名・サイトURLを設定
 
