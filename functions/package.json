@@ -2,7 +2,7 @@
   "name": "functions",
   "description": "通知メール送信用 Cloud Functions",
   "engines": {
-    "node": "20"
+    "node": "22"
   },
   "main": "index.js",
   "dependencies": {
