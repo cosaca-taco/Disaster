@@ -221,6 +221,58 @@ https://your-project.web.app
 
 ---
 
+## バックアップ
+
+報告データ（Firestore）と画像（Storage）は障害・誤操作に備えて定期的にバックアップすることを推奨します。
+
+事前に `gcloud` CLI が必要です（`gcloud auth login` でログインしておく）。
+
+### 1. Firestoreデータのバックアップ
+
+```bash
+# Firestoreのデータをエクスポート（Cloud Storage上にバックアップを作成）
+gcloud firestore export gs://your-project.firebasestorage.app/backups/$(date +%Y%m%d) \
+  --project=your-project-id
+
+# 作成したバックアップをローカルにダウンロード
+mkdir -p ./backup/firestore-$(date +%Y%m%d)
+gsutil -m cp -r gs://your-project.firebasestorage.app/backups/$(date +%Y%m%d) \
+  ./backup/firestore-$(date +%Y%m%d)
+```
+
+### 2. Storage内の画像ファイルのバックアップ
+
+```bash
+mkdir -p ./backup/storage-$(date +%Y%m%d)
+gsutil -m cp -r gs://your-project.firebasestorage.app/reports \
+  ./backup/storage-$(date +%Y%m%d)
+```
+
+### 3. ソースコードのバックアップ
+
+ソースコードはGitHubで管理されているため、最新を取得しておけば十分です。
+
+```bash
+git pull origin claude/happy-brown-5h8Lk
+git log --oneline -5
+```
+
+### 復元する場合
+
+```bash
+# Firestoreの復元（エクスポートしたバックアップから）
+gcloud firestore import gs://your-project.firebasestorage.app/backups/20260618 \
+  --project=your-project-id
+```
+
+> 復元はFirestore内の既存データを上書きする可能性があるため、本番環境での実行前に必ず内容を確認してください。
+
+### 自動バックアップ（推奨）
+
+手動でのバックアップ忘れを防ぐため、Cloud SchedulerとCloud Functionsを組み合わせて定期的に自動実行する方法もあります。導入を希望する場合は別途実装します。
+
+---
+
 ## 設定値リファレンス（`siteConfig`）
 
 | キー | 型 | 説明 |
